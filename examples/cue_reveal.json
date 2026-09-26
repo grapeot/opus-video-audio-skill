@@ -1,0 +1,137 @@
+{
+  "name": "cue",
+  "duration": 10.0,
+  "bpm": 60,
+  "_comment": "bpm 60 makes one beat equal one second, so every 'at' below is literally a timecode you can read off a storyboard. Keep it at 60 unless you need musical bar math.",
+  "tracks": [
+    {
+      "name": "lead",
+      "program": 0,
+      "channel": 0,
+      "reverb": 110,
+      "notes": [
+        {
+          "at": 0.3,
+          "note": 69,
+          "vel": 42,
+          "dur": 1.6,
+          "why": "voice A, one place"
+        },
+        {
+          "at": 1.7,
+          "note": 74,
+          "vel": 34,
+          "dur": 1.6,
+          "why": "voice B answers"
+        },
+        {
+          "at": 3.3,
+          "note": 66,
+          "vel": 38,
+          "dur": 1.4
+        },
+        {
+          "at": 4.4,
+          "note": 71,
+          "vel": 32,
+          "dur": 1.3
+        },
+        {
+          "at": 5.4,
+          "note": 69,
+          "vel": 36,
+          "dur": 1.2
+        },
+        {
+          "at": 6.05,
+          "note": 62,
+          "vel": 52,
+          "dur": 3.9,
+          "why": "reveal beat"
+        },
+        {
+          "at": 6.05,
+          "note": 69,
+          "vel": 46,
+          "dur": 3.9
+        },
+        {
+          "at": 6.05,
+          "note": 74,
+          "vel": 44,
+          "dur": 3.9
+        },
+        {
+          "at": 7.3,
+          "note": 78,
+          "vel": 30,
+          "dur": 2.6
+        },
+        {
+          "at": 8.6,
+          "note": 74,
+          "vel": 24,
+          "dur": 1.4
+        }
+      ]
+    },
+    {
+      "name": "low_strings",
+      "program": 48,
+      "channel": 1,
+      "reverb": 127,
+      "notes": [
+        {
+          "at": 5.85,
+          "note": 38,
+          "vel": 30,
+          "dur": 4.1,
+          "why": "swell under the reveal"
+        },
+        {
+          "at": 5.95,
+          "note": 50,
+          "vel": 26,
+          "dur": 4.0
+        },
+        {
+          "at": 6.6,
+          "note": 57,
+          "vel": 20,
+          "dur": 3.3
+        }
+      ]
+    }
+  ],
+  "render": {
+    "gain": 6.0,
+    "_gain_comment": "Soundfont-specific. MuseScore_General.sf2 wants about 6; the macOS gs_instruments.dls bank wants about 4.5. Re-measure peak after any soundfont change instead of trusting a remembered number.",
+    "sample_rate": 48000,
+    "fade_in": 0.3,
+    "fade_out_start": 9.0,
+    "fade_out_dur": 1.0,
+    "loudnorm": "I=-19:TP=-3:LRA=11"
+  },
+  "_storyboard_comment": "Each beat is checked against the measured RMS envelope, relative to the cue's own median level. Place 'quiet' checks in the gaps between notes, not on an attack: a single struck note's onset window is genuinely loud even in a sparse passage, so checking at 0.0 where a note starts will fail for the wrong reason.",
+  "storyboard": [
+    {
+      "at": 1.0,
+      "expect": "quiet",
+      "why": "sparse opening, single notes decaying"
+    },
+    {
+      "at": 2.5,
+      "expect": "quiet"
+    },
+    {
+      "at": 6.0,
+      "expect": "loud",
+      "why": "reveal beat - must be the peak of the envelope"
+    },
+    {
+      "at": 9.5,
+      "expect": "quiet",
+      "why": "faded out before the cut"
+    }
+  ]
+}

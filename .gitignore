@@ -1,0 +1,30 @@
+# Credentials
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.venv/
+
+# Rendered audio and intermediates — reproducible from the specs, and large
+out/
+*.wav
+*.mp3
+*.mid
+*_report.json
+
+# Soundfonts (206MB; fetch from the upstream mirror)
+*.sf2
+*.sf3
+*.dls
+
+# ffmpeg two-pass leftovers
+ffmpeg2pass-*
+
+# OS / editor
+.DS_Store
+*.swp
