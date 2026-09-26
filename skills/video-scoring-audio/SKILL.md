@@ -303,6 +303,18 @@ python3 scripts/score_cue.py measure existing.wav --storyboard cue.json
 python3 scripts/score_cue.py fingerprint out/*.wav    # before offering choices
 ```
 
+Generate `cue.json` from the picture's own timeline module instead of typing
+timecodes: a script that imports the same beat times the renderer uses and writes
+the notes. In the films built with this, one harp note per date change, one
+rising note per character of a closing greeting, and a chord on the frame the
+moon became full were all placed this way, and later timing changes to the
+picture moved the music with them.
+
+When a cue has one intended peak, check that no earlier accent competes with it.
+A single harp note marking a moonrise measured -13.2 dB against the chord's
+-12.0 dB in the envelope -- nearly as loud as the climax -- and was lowered
+until the chord was clearly the peak.
+
 The spec keeps `bpm` at 60 so one beat equals one second and every `at` value is
 literally a timecode you can read off a storyboard. Each note carries `at`, `note`
 (MIDI number), `vel` and `dur`, plus an optional `why` to record which beat of the

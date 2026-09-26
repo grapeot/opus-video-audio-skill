@@ -2,6 +2,12 @@
 
 ## Changelog
 
+### 2026-09-26 — lessons from two more films
+
+Two films made with the renamed skill: a 12s lunar-phase piece and a 15s moonrise over the sea (sky lanterns, calligraphy, seal). Added to `procedural-video-frames`: decide the concept before rendering (the first film was clean but read as monotonous and not as the holiday; the second concept was picked by the human from three written options); physically true effects that read as glitches at the film's time scale (compressed libration looked like wobble); mapping a source's size through the right Jacobian (the moon path came out ~20x too narrow in azimuth, first misread as physics) with the Cox-Munk glitter recipe and footprint filtering of waves; glow boxes recurring on small sprites; directional weights that hit zero draw a dark ray; occluding only the layers behind an object; coloured emitters losing hue in the tone map; hard-cutting changing labels (a crossfade overlaid two characters into a third); one shared timeline module for picture and music. Added to `video-scoring-audio`: generate the cue from the picture's timeline; check that no early accent competes with the intended peak.
+
+`check_frames.py frames`: the midline seam check is now opt-in (`--seam`), because a centred subject such as a moon's reflection path trips it on an ordinary shot. Re-verified: the known-bad split-screen pass from the first film still exits 1 without `--seam` (column step at 541), the good first-film render and the moonrise render exit 0 (the latter with a deliberately raised `--max-corner 35` for its lit sky). Corner and tonal-spread messages now say when a lit sky or a dark night scene is the likely cause.
+
 ### 2026-09-26 — renamed to opus-video-audio-skill
 
 Renamed from `video-audio-skill` to make the supported configuration explicit: both skills were authored and validated with Claude Opus and have not been tested with other models. Skill names (`video-scoring-audio`, `procedural-video-frames`) are unchanged.

@@ -85,10 +85,13 @@ def cmd_frames(a):
     worst_corner = max(r["corner"] for r in rows)
     if worst_corner > a.max_corner:
         problems.append(f"frame corner luminance {worst_corner:.1f} > {a.max_corner}: "
-                        f"light is leaking frame-wide (sky floor too high, or a halo flooding)")
+                        f"light is leaking frame-wide (sky floor too high, or a halo flooding). "
+                        f"If the sky is lit by design (moonlit, twilight), raise --max-corner "
+                        f"deliberately and say so")
     if all(r["p90"] - r["p10"] < a.min_spread for r in rows):
         problems.append(f"tonal spread below {a.min_spread} in every sampled frame: "
-                        f"image is flat (check tone mapping / contrast)")
+                        f"image is flat (check tone mapping / contrast). A night scene that is "
+                        f"mostly dark by design also trips this; judge it by looking")
 
     # --- halo boxes: look for straight vertical/horizontal steps ----------
     L = _luma(files[idx[len(idx) // 2]])
@@ -101,15 +104,18 @@ def cmd_frames(a):
             problems.append(f"sharp {name} step at {at} "
                             f"(jump {d1.max():.1f}): possible halo box edge or seam")
 
-    # --- seam: compare midline columns against neighbours -----------------
-    W = L.shape[1]
-    mid = W // 2
-    seam = L[:, mid - 1:mid + 2].mean()
-    near = np.mean([L[:, mid - 60:mid - 40].mean(), L[:, mid + 40:mid + 60].mean()])
-    print(f"\n  seam columns {seam:.1f} vs neighbours {near:.1f}")
-    if abs(seam - near) > a.seam_tol:
-        problems.append(f"midline luminance {seam:.1f} differs from neighbours "
-                        f"{near:.1f} by >{a.seam_tol}: visible seam")
+    # --- seam: only meaningful for split-screen frames ---------------------
+    # A centred subject (a moon, its reflection path) trips this on an
+    # ordinary single-camera shot, so it is opt-in.
+    if a.seam:
+        W = L.shape[1]
+        mid = W // 2
+        seam = L[:, mid - 1:mid + 2].mean()
+        near = np.mean([L[:, mid - 60:mid - 40].mean(), L[:, mid + 40:mid + 60].mean()])
+        print(f"\n  seam columns {seam:.1f} vs neighbours {near:.1f}")
+        if abs(seam - near) > a.seam_tol:
+            problems.append(f"midline luminance {seam:.1f} differs from neighbours "
+                            f"{near:.1f} by >{a.seam_tol}: visible seam")
 
     print()
     for p in problems:
@@ -224,6 +230,8 @@ def main():
     f.add_argument("--max-corner", type=float, default=20.0)
     f.add_argument("--min-spread", type=float, default=25.0)
     f.add_argument("--step-thresh", type=float, default=0.55)
+    f.add_argument("--seam", action="store_true",
+                   help="split-screen frame: check the midline for a seam")
     f.add_argument("--seam-tol", type=float, default=6.0)
     f.set_defaults(func=cmd_frames)
 

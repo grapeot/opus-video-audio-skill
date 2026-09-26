@@ -23,7 +23,9 @@ description: >
 # Procedural Video: Frames from Code
 
 > Validated: the video half of a short-video pipeline, on macOS, September 2026,
-> across roughly a dozen full 240-frame render passes of a 10s vertical film.
+> across roughly a dozen full 240-frame render passes of a 10s vertical film, then
+> two more films from the same pipeline: a 12s lunar-phase piece and a 15s moonrise
+> over the sea with sky lanterns and calligraphy.
 > For the audio half -- composing a cue, hitting timecodes, loudness, and the
 > fact that you cannot hear -- see the sibling skill `video-scoring-audio`.
 
@@ -38,6 +40,39 @@ geometry, a video model is cheaper and you should say so.
 
 The pipeline is small: a Python script writes `f0000.png … f0239.png`, and
 ffmpeg turns them into an mp4. Everything hard lives in the script.
+
+## Decide what the film is before deciding how to render it
+
+The costliest miss in this project was not a rendering bug. A technically clean
+film -- one moon on a black sky, its phase growing from new to full -- came back
+as "fine, but monotonous, and it doesn't read as the holiday". The second concept,
+chosen by the human from three written options before any code, landed.
+
+What the human asked for was a film that "looks expensive", and was explicit that
+this does not mean more symbols. What delivered it:
+
+- **Depth layers.** Far haze-dimmed islands, a mist band on the horizon, near
+  water with resolved waves. One subject on an empty background reads as a demo.
+- **Light interacting with matter.** A reflection path on water, glow through
+  mist, lanterns lit from inside. Each is a computation you can get right.
+- **Restraint in the finish.** Calligraphy set vertically, a seal, one closing line.
+- **Say the occasion.** A poem that implies the holiday was not enough; the human
+  asked for the greeting itself to be on screen.
+
+Write two or three concepts in prose, with the risk of each, and let the human
+choose before building. Avoid procedurally drawn figurative characters (people,
+animals): they are the fastest way to look cheap, and an earlier attempt to
+trace one onto real data did not hold up.
+
+## Physics the viewer cannot read becomes a defect
+
+Accurate detail is only worth rendering if a viewer perceives it as intended.
+Lunar libration (the Moon's real few-degree nod over a month) was added to the
+phase film; compressed from two weeks into seven seconds it read as the moon
+**wobbling left and right**, and the human asked whether it was a bug. Time
+compression changes what motion means. Before adding a physically true effect,
+ask what it will look like at the film's time scale, and cut it if the answer is
+"like an error".
 
 ## Reason about framing in angles before you write the render loop
 
@@ -118,6 +153,36 @@ any subject should be near-black (luminance ~10), and the subject should show
 real spread (e.g. p10≈22, p90≈125). If the corner is bright, something is
 leaking light into the whole frame.
 
+## Map a source's size through the right Jacobian
+
+When a light source's angular extent is carried into another space -- facet
+slopes on water, texture coordinates, a blur kernel -- derive the mapping rather
+than assuming a simple scale. The failure here was silent and plausible: the
+moon's reflection path on the sea came out far narrower than the moon, and was
+first rationalised as "grazing geometry". It was a bug. Reflecting a source
+offset `d` in azimuth needs a facet slope of `d / (sin(eps) + sin(alpha))`, where
+`eps` is the view depression and `alpha` the source elevation -- about 20x more
+than the `d / 2` that holds in elevation, because near grazing both angles are
+tiny. With the correct per-axis variance the path became as wide as the moon.
+
+**Sanity check that would have caught it:** on calm water the reflection of a
+source is at least as wide as the source. Anything narrower is a modelling error.
+
+For glitter on water, the Cox-Munk form worked well: for each sea pixel compute
+the half vector between the view and source directions, turn it into the facet
+slope that would mirror the source, and weight by the slope distribution:
+
+```python
+L = E_source * fresnel * p(slope_required) / (4 * cos_view * cos_tilt ** 4)
+```
+
+Resolve long swell geometrically and filter each wave component by the pixel's
+footprint on the water (`exp(-0.5*((kx*fx)**2 + (kz*fz)**2))`), adding the
+filtered-out slope variance to the roughness. Without that, distant water aliases
+into flicker; with it, far water becomes a smooth column and near water breaks
+into streaks. Hand a fraction of the path's energy to short-lived sparkle points
+with the same mean, and the column glitters without changing its brightness.
+
 ## Draw glows over their own generous box, and force them to zero
 
 The classic artifact is a **visible rectangle** around a subject: a radial
@@ -131,6 +196,26 @@ glow *= np.clip(1.0 - rr / 5.5, 0, 1) ** 2   # hard zero before the box edge
 
 Verify by sampling a row through the subject: values should fall off smoothly
 with no step.
+
+This applies to **every** local sprite, not only the hero. After being fixed on
+the moon, the same box reappeared around 22 small lanterns whose glow was drawn
+in a box three sigmas wide. Size the box from the glow sigma (about 4.5 sigma)
+and multiply by `clip(1 - r/(4*sigma), 0, 1)**2`.
+
+Three related shading traps:
+
+- **Directional weights must not reach zero at the far side.** A glow made
+  lopsided with `((1 + dot) / 2) ** k` drops to exactly zero opposite the light,
+  and with a small `k` that zero is a thin **dark ray** across the sky. Use
+  `exp(-k * (1 - dot))`, which is smooth everywhere.
+- **Occlude only what is behind the object.** Masking the whole canvas behind a
+  disc (to hide stars) also removed the sky glow, which is atmosphere *in front*
+  of the disc -- so the unlit limb came out darker than the sky around it.
+  Apply the occlusion mask to the background layers only.
+- **Bright coloured emitters lose their hue in the tone map.** Warm orange
+  lanterns pushed high enough to "glow" came out pale yellow under Reinhard.
+  Keep coloured emitters in the range where the curve still preserves hue and
+  let a soft halo carry the brightness.
 
 ## Seams: draw shared geometry once, across the whole frame
 
@@ -183,6 +268,25 @@ line, an outline that never faded. Coordinates converged correctly the whole
 time. Numbers catch exposure and geometry; only looking catches composition.
 Check at least the opening, each transition beat, and the final frame.
 
+## Text on screen
+
+Render glyphs to a coverage mask and blend in float, not through PIL's alpha on
+an RGB image. Set CJK vertically one glyph at a time. When a label changes on a
+beat (a date counter, a score), **hard-cut on the beat instead of crossfading**:
+a 0.09s crossfade between two characters overlaid them into a third, readable,
+wrong character (初六 + 初七 read as "初太"). Hard cuts also land exactly on the
+music's onset.
+
+## Share one timeline between picture and music
+
+Put every beat time in one small module that both the renderer and the cue
+generator import. The phase film computed its date ticks from one function; the
+cue's notes were written from the same list, and each label flipped on the first
+frame after its note's onset with nothing tuned by hand. Deriving an event time
+(e.g. when a rising disc first clears the horizon) by solving the same motion
+function in that module keeps a sound on the frame it belongs to, even after the
+motion changes.
+
 ## Assembly and stream verification
 
 Mux with an explicit frame rate, and verify rather than assuming:
@@ -218,5 +322,8 @@ result for a different one, which reads as a rendering bug and is not.
 - No rectangular halo edges; no seam at panel boundaries
 - Frames confirmed to be from this run (process exited, or fresh directory)
 - Opening, each transition beat, and the final frame looked at as images
+- Every local glow sprite forced to zero inside its box; no directional weight hits zero
+- Physically true effects checked at the film's time scale (none reads as a glitch)
+- Concept chosen by the human before building; the occasion is said on screen
 - `ffprobe` dimensions/fps/duration match intent; `ffmpeg -f null -` is silent
 - Delivery codec matches the audience
