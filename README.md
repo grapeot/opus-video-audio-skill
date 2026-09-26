@@ -2,7 +2,7 @@
 
 Two agent skills for producing short videos programmatically — the **audio** (music cues that land on specific timecodes) and the **video** (frames rendered from code, then muxed with ffmpeg).
 
-Built from real jobs: a 10-second vertical film, scored and rendered end to end, then two more films on the same pipeline (a 12s lunar-phase piece and a 15s moonrise over the sea with sky lanterns and calligraphy).
+Built from real jobs: several short vertical films, scored and rendered end to end.
 
 ## Built for Claude Opus
 
@@ -34,7 +34,7 @@ On the video side the analogous trap is subtler: the numbers can all be right wh
 - `examples/cue_reveal.json` — an annotated 10-second cue spec with a reveal beat at 6.0s.
 
 **Video**
-- `skills/procedural-video-frames/SKILL.md` — framing math (angular size → focal length, and the shots that are geometrically impossible), linear compositing with a single tone map, the inverted exposure law for a changing field of view, halo-box and seam artifacts, water reflections (Cox-Munk glitter and the Jacobian mistake that makes a moon path too narrow), deciding the concept before rendering, one shared timeline for picture and music, frame-sequence verification, and ffmpeg assembly with stream checks.
+- `skills/procedural-video-frames/SKILL.md` — framing math (angular size → focal length, and the shots that are geometrically impossible), linear compositing with a single tone map, the inverted exposure law for a changing field of view, halo-box and seam artifacts, settling the concept before rendering, glow and sprite artifacts, reflections on water, on-screen text, one shared timeline for picture and music, frame-sequence verification, and ffmpeg assembly with stream checks.
 - `scripts/check_frames.py` — three checks: `plan` (is the subject the size you think, and does the shot fit?), `frames` (freshness, exposure, halo boxes; `--seam` adds a midline seam check for split-screen frames), `stream` (ffprobe geometry + full decode). Exits non-zero on failure.
 
 **Shared**

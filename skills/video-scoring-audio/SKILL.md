@@ -304,16 +304,16 @@ python3 scripts/score_cue.py fingerprint out/*.wav    # before offering choices
 ```
 
 Generate `cue.json` from the picture's own timeline module instead of typing
-timecodes: a script that imports the same beat times the renderer uses and writes
-the notes. In the films built with this, one harp note per date change, one
-rising note per character of a closing greeting, and a chord on the frame the
-moon became full were all placed this way, and later timing changes to the
-picture moved the music with them.
+timecodes: a small script imports the same beat times the renderer uses and
+writes the notes. Patterns that work this way -- one note per counter tick, one
+rising note per character as a line of text writes itself on, a chord on the
+frame of the visual climax -- stay in sync when the picture's timing changes,
+because the music is recomputed rather than retyped.
 
-When a cue has one intended peak, check that no earlier accent competes with it.
-A single harp note marking a moonrise measured -13.2 dB against the chord's
--12.0 dB in the envelope -- nearly as loud as the climax -- and was lowered
-until the chord was clearly the peak.
+When a cue has one intended peak, check the envelope for earlier accents that
+compete with it. A single exposed note on an early visual event can measure
+within a decibel or two of the climax, which flattens the arc; lower it until
+the climax is clearly the loudest window.
 
 The spec keeps `bpm` at 60 so one beat equals one second and every `at` value is
 literally a timecode you can read off a storyboard. Each note carries `at`, `note`

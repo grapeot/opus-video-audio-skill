@@ -3,29 +3,30 @@ name: procedural-video-frames
 description: >
   Render short videos as numbered PNG frames from a Python script, then mux them
   with ffmpeg -- the frame-sequence pipeline, not a DAW and not a text-to-video
-  model. Covers camera and framing math (why a subject's real angular size
-  dictates the focal length, and why some shots are geometrically impossible),
-  additive linear compositing with tone mapping, exposure that has to change as
-  the field of view changes, and the verification discipline that keeps you from
-  reviewing stale frames or shipping a shot you never actually looked at. Use
-  this skill whenever a task involves rendering or animating a short video,
-  reel, short, explainer or title sequence programmatically; whenever frames are
+  model. Covers settling the concept before building, camera and framing math
+  (why a subject's real angular size dictates the focal length, and why some
+  shots are geometrically impossible), additive linear compositing with tone
+  mapping, exposure that has to change as the field of view changes, glow and
+  sprite artifacts, reflections, on-screen text, one timeline shared with the
+  music, and the verification discipline that keeps you from reviewing stale
+  frames or shipping a shot you never actually looked at. Use this skill
+  whenever a task involves rendering or animating a short video, reel, short,
+  greeting, explainer or title sequence programmatically; whenever frames are
   produced by code (numpy, PIL, matplotlib, Blender scripting) and assembled
   into an mp4; whenever a camera has to push in, pan or reframe over time;
-  whenever compositing a subject over a background with glow, halo or haze; or
-  whenever a render looks washed out, too dark, or has visible seams and edges.
-  Reach for it even when the animation sounds trivial ("just zoom into this
-  image over 10 seconds"), because the failure modes here -- inverted exposure
-  laws, off-frame geometry, stale-frame review -- are silent and cost whole
-  render passes.
+  whenever compositing a subject over a background with glow, halo, haze or a
+  reflection; or whenever a render looks washed out, too dark, flat, or has
+  visible seams and edges. Reach for it even when the animation sounds trivial
+  ("just zoom into this image over 10 seconds"), because the failure modes here
+  -- inverted exposure laws, off-frame geometry, stale-frame review -- are
+  silent and cost whole render passes.
 ---
 
 # Procedural Video: Frames from Code
 
-> Validated: the video half of a short-video pipeline, on macOS, September 2026,
-> across roughly a dozen full 240-frame render passes of a 10s vertical film, then
-> two more films from the same pipeline: a 12s lunar-phase piece and a 15s moonrise
-> over the sea with sky lanterns and calligraphy.
+> Validated on macOS, September 2026, across several short vertical films
+> (10-15s, 24-30fps) rendered end to end with this pipeline, each taken through
+> multiple full render passes and human review.
 > For the audio half -- composing a cue, hitting timecodes, loudness, and the
 > fact that you cannot hear -- see the sibling skill `video-scoring-audio`.
 
@@ -41,38 +42,47 @@ geometry, a video model is cheaper and you should say so.
 The pipeline is small: a Python script writes `f0000.png … f0239.png`, and
 ffmpeg turns them into an mp4. Everything hard lives in the script.
 
-## Decide what the film is before deciding how to render it
+## Settle the concept before writing the renderer
 
-The costliest miss in this project was not a rendering bug. A technically clean
-film -- one moon on a black sky, its phase growing from new to full -- came back
-as "fine, but monotonous, and it doesn't read as the holiday". The second concept,
-chosen by the human from three written options before any code, landed.
+The most expensive miss is not a rendering bug but a clean render of the wrong
+film. A technically correct piece built around one subject on an empty
+background tends to come back as "fine, but monotonous", and a piece that only
+implies its occasion tends to come back as "I can't tell what this is for".
+Neither is fixable with parameters.
 
-What the human asked for was a film that "looks expensive", and was explicit that
-this does not mean more symbols. What delivered it:
+Before code, write two or three concepts in a few sentences each -- what is on
+screen, what moves, what the viewer should feel, and the main risk of each --
+and let the human choose. It is cheap, and the choice usually changes the scene
+graph, not just the colours.
 
-- **Depth layers.** Far haze-dimmed islands, a mist band on the horizon, near
-  water with resolved waves. One subject on an empty background reads as a demo.
-- **Light interacting with matter.** A reflection path on water, glow through
-  mist, lanterns lit from inside. Each is a computation you can get right.
-- **Restraint in the finish.** Calligraphy set vertically, a seal, one closing line.
-- **Say the occasion.** A poem that implies the holiday was not enough; the human
-  asked for the greeting itself to be on screen.
+When the brief is for something that looks polished or "expensive", that rarely
+means more symbols. What reliably reads as high production value in procedural
+work:
 
-Write two or three concepts in prose, with the risk of each, and let the human
-choose before building. Avoid procedurally drawn figurative characters (people,
-animals): they are the fastest way to look cheap, and an earlier attempt to
-trace one onto real data did not hold up.
+- **Depth.** At least three layers -- far (haze-dimmed), middle, near -- so a
+  slow camera move produces parallax. One subject on an empty field reads as a
+  tech demo.
+- **Light interacting with matter.** Reflections, glow through haze, rim light
+  on cloud or mist, emitters lighting their surroundings. These are computations
+  you can get right, and they carry the look.
+- **Restraint in the finish.** Considered typography, generous negative space,
+  a single closing element.
+- **Say the message.** If the film is for an occasion or a greeting, put the
+  words on screen; allusion alone is not enough for most viewers.
 
-## Physics the viewer cannot read becomes a defect
+Avoid procedurally drawn figurative characters (people, animals, mascots). They
+are the fastest route to looking cheap, and a silhouette traced onto data
+rarely holds up. Suggest them through context instead.
 
-Accurate detail is only worth rendering if a viewer perceives it as intended.
-Lunar libration (the Moon's real few-degree nod over a month) was added to the
-phase film; compressed from two weeks into seven seconds it read as the moon
-**wobbling left and right**, and the human asked whether it was a bug. Time
-compression changes what motion means. Before adding a physically true effect,
-ask what it will look like at the film's time scale, and cut it if the answer is
-"like an error".
+## Test every physical detail for perceptibility
+
+Accurate detail earns its place only if a viewer perceives it as intended. Time
+compression is the usual trap: a slow real motion squeezed into seconds changes
+meaning. A real, few-degree oscillation that takes weeks, played back in a few
+seconds, reads as the subject **wobbling**, and a viewer will ask whether it is
+a bug. Before adding a physically true effect, ask what it will look like at the
+film's time scale and on a phone screen, and cut it if the honest answer is
+"like an error" or "like nothing".
 
 ## Reason about framing in angles before you write the render loop
 
@@ -93,9 +103,10 @@ frame with it (~320px) needs a ~3.1° field, a strong telephoto.
 The consequence is a real constraint, not a preference: **a narrow field aimed
 high cannot also contain the ground.** With the camera pointed 50° up in a 3.1°
 field, the horizon lands thousands of pixels below the frame. That is why real
-telephoto moon photographs have no landscape in them. If a brief asks for both a
-filled subject and the foreground, the honest answers are to split the shot into
-two focal segments, or to change the brief -- not to fake it.
+telephoto photographs of a high subject have no landscape in them. If a brief
+asks for both a filled subject and the foreground, the honest answers are to
+split the shot into two focal segments, keep the subject low (near the horizon
+a telephoto can hold both), or change the brief -- not to fake it.
 
 When a shot does need two focal lengths, interpolate in **log focal space**, or
 the push visibly races at the tight end:
@@ -131,6 +142,11 @@ set an order of magnitude too high: a floor of `0.012` tone-mapped to luminance
 27/255 -- a grey sky, not a night one. Run the floor through the tone map alone
 and look at the number before blaming anything else.
 
+**Coloured emitters lose their hue when pushed bright.** A saturated warm light
+driven high enough to "glow" comes out pale yellow-white after a Reinhard-style
+curve, because every channel saturates. Keep coloured emitters in the range where
+the curve still preserves hue, and let a soft halo carry the sense of brightness.
+
 ## Exposure has to follow the field of view, and the sign is counterintuitive
 
 When the camera pushes from wide to tight, the per-element gain must **fall as
@@ -149,73 +165,84 @@ small = np.clip(150.0 / diameter_px, 0.12, 6.0)   # prominent when tiny, nearly 
 ```
 
 Diagnose these by sampling regions, not by squinting: a frame corner far from
-any subject should be near-black (luminance ~10), and the subject should show
-real spread (e.g. p10≈22, p90≈125). If the corner is bright, something is
-leaking light into the whole frame.
+any subject should be near-black (luminance ~10) unless the sky is lit by
+design, and the subject should show real spread (e.g. p10≈22, p90≈125). If the
+corner is bright and you did not intend it, something is leaking light into the
+whole frame.
 
-## Map a source's size through the right Jacobian
+## Glows and sprites: force every falloff to zero
 
-When a light source's angular extent is carried into another space -- facet
-slopes on water, texture coordinates, a blur kernel -- derive the mapping rather
-than assuming a simple scale. The failure here was silent and plausible: the
-moon's reflection path on the sea came out far narrower than the moon, and was
-first rationalised as "grazing geometry". It was a bug. Reflecting a source
-offset `d` in azimuth needs a facet slope of `d / (sin(eps) + sin(alpha))`, where
-`eps` is the view depression and `alpha` the source elevation -- about 20x more
-than the `d / 2` that holds in elevation, because near grazing both angles are
-tiny. With the correct per-axis variance the path became as wide as the moon.
-
-**Sanity check that would have caught it:** on calm water the reflection of a
-source is at least as wide as the source. Anything narrower is a modelling error.
-
-For glitter on water, the Cox-Munk form worked well: for each sea pixel compute
-the half vector between the view and source directions, turn it into the facet
-slope that would mirror the source, and weight by the slope distribution:
+The classic artifact is a **visible rectangle** around a glowing element: a
+radial falloff computed over a local box never reaches zero at the box edge, so
+the box shows. Size the box from the falloff (about 4.5 sigma for a Gaussian),
+and multiply by a term that hits exactly zero inside it:
 
 ```python
-L = E_source * fresnel * p(slope_required) / (4 * cos_view * cos_tilt ** 4)
+glow *= np.clip(1.0 - r / (4.0 * sigma), 0, 1) ** 2   # hard zero before the box edge
 ```
 
-Resolve long swell geometrically and filter each wave component by the pixel's
-footprint on the water (`exp(-0.5*((kx*fx)**2 + (kz*fz)**2))`), adding the
-filtered-out slope variance to the roughness. Without that, distant water aliases
-into flicker; with it, far water becomes a smooth column and near water breaks
-into streaks. Hand a fraction of the path's energy to short-lived sparkle points
-with the same mean, and the column glitters without changing its brightness.
+This applies to **every** local sprite -- particles, small lights, secondary
+elements -- not only the hero subject. Fixing it on the main element does not
+fix it on the twenty small ones drawn by a different function. Verify by
+sampling a row through a sprite: values should fall off smoothly with no step.
 
-## Draw glows over their own generous box, and force them to zero
+Two related shading traps:
 
-The classic artifact is a **visible rectangle** around a subject: a radial
-falloff computed over the subject's bounding box never reaches zero at the box
-edge, so the box shows. Compute the glow over a box several times larger, and
-multiply by a term that hits exactly zero inside it:
-
-```python
-glow *= np.clip(1.0 - rr / 5.5, 0, 1) ** 2   # hard zero before the box edge
-```
-
-Verify by sampling a row through the subject: values should fall off smoothly
-with no step.
-
-This applies to **every** local sprite, not only the hero. After being fixed on
-the moon, the same box reappeared around 22 small lanterns whose glow was drawn
-in a box three sigmas wide. Size the box from the glow sigma (about 4.5 sigma)
-and multiply by `clip(1 - r/(4*sigma), 0, 1)**2`.
-
-Three related shading traps:
-
-- **Directional weights must not reach zero at the far side.** A glow made
-  lopsided with `((1 + dot) / 2) ** k` drops to exactly zero opposite the light,
-  and with a small `k` that zero is a thin **dark ray** across the sky. Use
+- **Directional weights must not reach zero.** Making a glow lopsided toward a
+  light with `((1 + dot) / 2) ** k` drives it to exactly zero on the far side,
+  and with a small `k` that zero shows as a thin **dark ray**. Use
   `exp(-k * (1 - dot))`, which is smooth everywhere.
-- **Occlude only what is behind the object.** Masking the whole canvas behind a
-  disc (to hide stars) also removed the sky glow, which is atmosphere *in front*
-  of the disc -- so the unlit limb came out darker than the sky around it.
-  Apply the occlusion mask to the background layers only.
-- **Bright coloured emitters lose their hue in the tone map.** Warm orange
-  lanterns pushed high enough to "glow" came out pale yellow under Reinhard.
-  Keep coloured emitters in the range where the curve still preserves hue and
-  let a soft halo carry the brightness.
+- **Occlude only what is behind the object.** When a foreground body hides
+  background elements (stars behind a planet, lights behind a building), apply
+  the mask to those background layers only. Masking the whole canvas also
+  removes haze and glow that sit *in front* of the body, and its dark side comes
+  out darker than the sky around it.
+
+## Map extents between spaces through the right Jacobian
+
+Whenever a quantity's size is carried into another space -- a light source's
+angular extent into surface-slope space for reflections, a pixel's footprint
+into texture or world space, a blur radius into a different projection --
+derive the mapping instead of assuming a uniform scale. The two axes often
+scale very differently, and the error is silent: the output looks plausible,
+and it is easy to rationalise as "that's just the physics".
+
+Pair every such mapping with a sanity check from the real world. For
+reflections: **on a calm surface, the reflection of a source is at least as wide
+as the source.** A narrower reflection is a modelling error, not an effect.
+
+### Reflections on water
+
+A recipe that holds up for a light source over open water (Cox-Munk glitter):
+
+- For each water pixel, take the half vector between the direction to the
+  camera and the direction to the source, and turn it into the facet slope that
+  would mirror the source into that pixel.
+- Weight by the probability of that slope under the local slope distribution
+  (resolved waves as the mean, unresolved roughness as the variance):
+
+  ```python
+  L = E_source * fresnel * p(slope_required) / (4 * cos_view * cos_tilt ** 4)
+  ```
+
+- Include the source's own extent in the slope variance, **per axis**. An
+  azimuth offset `d` needs a slope of `d / (sin(view_depression) + sin(source_elevation))`,
+  while an elevation offset needs about `d / 2`. Near grazing the first is an
+  order of magnitude larger; using `d / 2` for both collapses the reflection into
+  a thin line.
+- Filter each wave component by the pixel's footprint on the water
+  (`exp(-0.5 * ((kx*fx)**2 + (kz*fz)**2))`) and add the filtered-out slope
+  variance to the roughness. Without it distant water aliases into flicker; with
+  it far water becomes a smooth band and near water breaks into streaks.
+- For sparkle, hand a fraction of the energy to short-lived random points whose
+  mean equals the smooth result. The reflection glitters without changing its
+  overall brightness.
+- Mirror the rest of the scene (sky, distant land, other lights) by sampling a
+  reflection buffer rendered from a virtual camera below the surface, at the
+  elevation the resolved wave slope sends each ray to. Reflections then wobble
+  with the waves for free.
+- Blend distance haze into the water so the horizon dissolves instead of
+  ending in a hard line.
 
 ## Seams: draw shared geometry once, across the whole frame
 
@@ -238,10 +265,31 @@ Two related traps, both of which look like a rendering bug but are not:
   edge**. If two panels converge onto one shared subject, composite that subject
   on the whole frame once they have merged, not inside either panel.
 
+## Text on screen
+
+- Render glyphs to a coverage mask and blend them into the float image
+  yourself, rather than relying on PIL alpha on an RGB image.
+- Vertical CJK text: place one glyph at a time down a column.
+- When a label changes on a beat (a counter, a date, a score), **hard-cut on the
+  beat** instead of crossfading. Two different glyphs mid-crossfade can overlay
+  into a third, legible, wrong character -- especially in CJK, where similar
+  strokes stack convincingly. A hard cut also lands exactly on the music.
+- A per-character reveal (each glyph fading in shortly after the previous one)
+  reads as writing, and gives the music one onset per character to hit.
+
+## Share one timeline between picture and music
+
+Put every beat time in one small module that both the renderer and the cue
+generator import. Compute derived event times (when a moving subject first
+crosses an edge, when a counter ticks) by evaluating or solving the same motion
+function the renderer uses, never by reading them off a preview. Then a change
+to the motion moves the music with it, and each visual event lands on the first
+frame after its note's onset without hand-tuning.
+
 ## Verification: the part that actually costs render passes
 
-An agent reviewing its own render is prone to two specific mistakes, and both
-burned full passes here.
+An agent reviewing its own render is prone to two specific mistakes, and each
+costs a full pass.
 
 **Confirm the frames you are looking at are from this run.** Waiting on a *file
 count* is a race: the previous pass's frames are still on disk, so the wait
@@ -262,30 +310,18 @@ validated a program you are not shipping. Import the real functions; if that is
 awkward, that awkwardness is a signal the render loop should be factored so both
 can call it.
 
-**Look at the images.** Several defects here were invisible in every number:
-two subjects reading as a pair instead of one, a subject bisected by a divider
-line, an outline that never faded. Coordinates converged correctly the whole
-time. Numbers catch exposure and geometry; only looking catches composition.
-Check at least the opening, each transition beat, and the final frame.
+**Look at the images.** Many defects are invisible in every number: two
+subjects reading as a pair instead of one, a subject bisected by a divider line,
+an outline that never faded, a ray or box artifact, a reflection narrower than
+its source. Numbers catch exposure and geometry; only looking catches
+composition. Check at least the opening, each transition beat, and the final
+frame, and crop to full resolution around anything small.
 
-## Text on screen
-
-Render glyphs to a coverage mask and blend in float, not through PIL's alpha on
-an RGB image. Set CJK vertically one glyph at a time. When a label changes on a
-beat (a date counter, a score), **hard-cut on the beat instead of crossfading**:
-a 0.09s crossfade between two characters overlaid them into a third, readable,
-wrong character (初六 + 初七 read as "初太"). Hard cuts also land exactly on the
-music's onset.
-
-## Share one timeline between picture and music
-
-Put every beat time in one small module that both the renderer and the cue
-generator import. The phase film computed its date ticks from one function; the
-cue's notes were written from the same list, and each label flipped on the first
-frame after its note's onset with nothing tuned by hand. Deriving an event time
-(e.g. when a rising disc first clears the horizon) by solving the same motion
-function in that module keeps a sound on the frame it belongs to, even after the
-motion changes.
+**Treat the checker's thresholds as defaults, not verdicts.** Generic checks
+(corner brightness, tonal spread, a midline seam) will fire on intentional
+choices -- a lit sky, a night scene that is mostly dark, a centred subject. When
+that happens, confirm by looking, then raise the threshold deliberately and say
+so, rather than tuning the image to satisfy the check.
 
 ## Assembly and stream verification
 
@@ -309,21 +345,20 @@ alongside. A clean decode proves data integrity, not that the shot is any good.
 ## Reuse before you rebuild
 
 If the project already has a renderer for this domain, read its docs and CLI
-before writing your own. In this project the existing tool already supported the
-aimed-camera mode being reimplemented from scratch — the flags were there, just
-unread. Equally, check that a cached dataset actually covers what the shot
-needs: a cache built for one framing silently returned an empty or clipped
-result for a different one, which reads as a rendering bug and is not.
+before writing your own; the mode you are about to reimplement may already be a
+flag. Equally, check that a cached dataset actually covers what the shot needs:
+a cache built for one framing can silently return an empty or clipped result for
+a different one, which reads as a rendering bug and is not.
 
 ## Checklist before declaring a render done
 
+- Concept chosen by the human before building; the message is said on screen
 - Angular-size table printed, and nothing that must be visible is off-frame
-- Frame corner near-black; subject shows real tonal spread
-- No rectangular halo edges; no seam at panel boundaries
+- Every physically true effect checked at the film's time scale
+- Frame corner dark unless lit by design; subject shows real tonal spread
+- No rectangular glow edges on any sprite; no directional weight reaches zero
+- Reflections at least as wide as their sources; no seam at panel boundaries
 - Frames confirmed to be from this run (process exited, or fresh directory)
 - Opening, each transition beat, and the final frame looked at as images
-- Every local glow sprite forced to zero inside its box; no directional weight hits zero
-- Physically true effects checked at the film's time scale (none reads as a glitch)
-- Concept chosen by the human before building; the occasion is said on screen
 - `ffprobe` dimensions/fps/duration match intent; `ffmpeg -f null -` is silent
 - Delivery codec matches the audience
