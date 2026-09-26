@@ -22,7 +22,8 @@ description: >
 # Scoring Audio for Short Video
 
 > Validated: the audio half of a short-video pipeline, on macOS, September 2026.
-> Not validated: the video half. See "Scope" below before extending this.
+> For the video half -- rendering frames from code, framing geometry, exposure,
+> and ffmpeg assembly -- see the sibling skill `procedural-video-frames`.
 
 ## Scope
 
@@ -30,11 +31,12 @@ This skill covers producing a finished audio cue: composing it, rendering it,
 normalizing it, and proving it has the properties you claim. It was extracted
 from building a 10-second vertical video's music and SFX bed.
 
-The video side of that pipeline -- generation, editing, muxing, aspect-ratio and
-codec choices for vertical delivery -- has **not** been validated and is
-deliberately absent. If a task needs it, work it out from primary sources and do
-not extrapolate from this document. Guessing at the video half and writing it
-down as if tested is how a skill becomes actively harmful.
+The video side lives in `procedural-video-frames` (rendering frames from code,
+camera and framing math, compositing, and ffmpeg assembly). Text-to-video
+generation models, non-linear editors and colour-managed delivery remain
+untested by either skill; if a task needs them, work from primary sources rather
+than extrapolating. Guessing and writing it down as if tested is how a skill
+becomes actively harmful.
 
 ## The one constraint that shapes everything
 

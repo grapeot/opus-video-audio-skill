@@ -1,18 +1,18 @@
 # video-audio-skill
 
-An agent skill for producing the **audio** of short videos programmatically: composing music cues that land on specific timecodes, rendering them locally, normalizing them, and verifying them objectively.
+Two agent skills for producing short videos programmatically — the **audio** (music cues that land on specific timecodes) and the **video** (frames rendered from code, then muxed with ffmpeg).
 
-Built from a real job — the music and SFX bed for a 10-second vertical video — and scoped to what was actually validated there.
+Built from a real job: a 10-second vertical film, scored and rendered end to end.
 
 ## Scope, honestly stated
 
-**Validated and covered:** music cue composition, local synthesis, loudness normalization, tail trimming, objective verification, and the generative-music API route with its failure modes.
+**Validated and covered:** music cue composition, local synthesis, loudness normalization, tail trimming, objective audio verification, the generative-music API route with its failure modes — and on the video side, camera/framing geometry, linear compositing and tone mapping, field-dependent exposure, halo and seam artifacts, frame-sequence verification, and ffmpeg assembly.
 
-**Not covered:** the video half of the pipeline. Video generation, editing, muxing, and vertical-delivery codec choices have not been tested in this project, so this repository says nothing about them. That gap is deliberate — untested pipeline advice presented as tested is worse than no advice.
+**Not covered:** text-to-video generation models, non-linear editors, and colour-managed delivery pipelines. Nothing here was tested against those, so this repository says nothing about them. That gap is deliberate — untested pipeline advice presented as tested is worse than no advice.
 
-## The central problem this skill solves
+## The central problem these skills solve
 
-An agent cannot hear audio. It therefore cannot steer any technique that requires ears to evaluate, and it must never claim a cue "sounds good".
+An agent cannot hear audio, and it is unreliable at judging its own renders. It therefore cannot steer any technique that requires ears to evaluate, and it must never claim a cue "sounds good".
 
 Two consequences drive the whole design:
 
@@ -20,12 +20,21 @@ Two consequences drive the whole design:
 
 **Measurement is part of the deliverable.** Duration, peak (clipping), the per-window RMS envelope, and spectral centroid are computable and are the only properties worth asserting. The aesthetic verdict belongs to the human.
 
+On the video side the analogous trap is subtler: the numbers can all be right while the shot is wrong. Coordinates converged correctly through a pass in which two subjects read as a pair instead of one, a subject was bisected by a divider line, and an outline never faded — none of it visible in any metric. So the video skill pairs mechanical checks with an explicit instruction to open the frames.
+
 ## What is here
 
-- `skills/video-scoring-audio/SKILL.md` — the skill: the MIDI + fluidsynth + soundfont pipeline, the Google Lyria API (endpoint shape, the copyright filter, the timing limitation), ffmpeg normalization and the mandatory tail trim, measurement code, and the variant-fingerprinting discipline.
-- `scripts/score_cue.py` — a CLI running the whole loop: cue spec → MIDI → render → normalize → measure. Exits non-zero on clipping, a duration mismatch, or an envelope that misses a storyboard beat.
+**Audio**
+- `skills/video-scoring-audio/SKILL.md` — the MIDI + fluidsynth + soundfont pipeline, the Google Lyria API (endpoint shape, the copyright filter, the timing limitation), ffmpeg normalization and the mandatory tail trim, measurement code, and the variant-fingerprinting discipline.
+- `scripts/score_cue.py` — cue spec → MIDI → render → normalize → measure. Exits non-zero on clipping, a duration mismatch, or an envelope that misses a storyboard beat.
 - `examples/cue_reveal.json` — an annotated 10-second cue spec with a reveal beat at 6.0s.
-- `docs/working.md` — changelog and the failures this skill was distilled from.
+
+**Video**
+- `skills/procedural-video-frames/SKILL.md` — framing math (angular size → focal length, and the shots that are geometrically impossible), linear compositing with a single tone map, the inverted exposure law for a changing field of view, halo-box and seam artifacts, frame-sequence verification, and ffmpeg assembly with stream checks.
+- `scripts/check_frames.py` — three checks: `plan` (is the subject the size you think, and does the shot fit?), `frames` (freshness, exposure, halo boxes, seams), `stream` (ffprobe geometry + full decode). Exits non-zero on failure.
+
+**Shared**
+- `docs/working.md` — changelog and the failures these skills were distilled from.
 
 ## Requirements
 

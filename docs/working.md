@@ -55,3 +55,47 @@ One measurement subtlety found while testing: a single struck note's attack wind
 ### GarageBand and Logic cannot be automated
 
 No headless mode, and their instruments are AudioUnit plugins in Apple's proprietary format rather than files a synthesizer can load. A human must drive the GUI. This is the reason the open SF2 + fluidsynth path matters — it is the only route where a script owns the whole compose-render-measure loop.
+
+## 2026-09-26 — video half added
+
+`skills/procedural-video-frames/SKILL.md` + `scripts/check_frames.py`.
+
+Distilled from rendering a 10s vertical film end to end (roughly a dozen full
+240-frame passes). The lessons that cost the most:
+
+**Framing is a feasibility question, not a taste question.** The Moon is 0.52°
+across; in a 52° field on a 1920px frame that is 11 pixels. Filling the frame
+needs ~3.1°, and at that field a camera aimed 50° up puts the horizon thousands
+of pixels below the frame — so "subject fills the frame AND the ground is
+visible" was geometrically impossible, not badly tuned. Caught only after a
+render pass. `check_frames.py plan` now prints this table up front.
+
+**The exposure law runs opposite to intuition.** Per-element gain must fall as
+the field widens, because a wide frame packs far more elements into the same
+pixels. Written the other way round, the wide shot blew out to grey noise.
+
+**Halos need a hard zero.** A radial falloff computed over the subject's
+bounding box never reaches zero at the box edge, so the box shows as a grey
+rectangle. Multiply by a term that hits zero well inside the box.
+
+**Two PIL traps.** `ImageDraw.line` on an RGB image silently ignores alpha in
+`fill`, so a "fading" divider stayed fully opaque all shot. And an element
+composited inside a half-width panel is cropped at the panel edge — once two
+panels converge on one subject, composite it on the whole frame.
+
+**Two verification failures, each costing a full pass.** Waiting on a *file
+count* is a race against the previous run's frames: the wait returned instantly
+and stale images were reviewed, concluding a fix "didn't work" when it was never
+tested. Wait for the process to exit, or render to a fresh directory. Separately,
+a preview script that reimplemented the render loop drifted from it — validating
+a program that was not being shipped.
+
+**Numbers cannot see composition.** Coordinates converged correctly through a
+pass where two subjects read as a pair instead of one, a subject was bisected by
+a divider, and an outline never faded. None of it appeared in any metric. The
+skill therefore pairs mechanical checks with an explicit instruction to open the
+frames at the opening, each transition beat, and the end.
+
+`check_frames.py` verified against this project's real output: passes the good
+render (exit 0), catches the known-bad pass by its seam and halo step at column
+541 (exit 1), validates the finished mp4, and flags stale frames via `--since`.
