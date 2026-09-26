@@ -2,6 +2,10 @@
 
 ## Changelog
 
+### 2026-09-26 — renamed to opus-video-audio-skill
+
+Renamed from `video-audio-skill` to make the supported configuration explicit: both skills were authored and validated with Claude Opus and have not been tested with other models. Skill names (`video-scoring-audio`, `procedural-video-frames`) are unchanged.
+
 ### 2026-09-25 — initial extraction
 
 Repository created from a real job: the music and SFX bed for a 10-second vertical video on macOS. Contents scoped to the audio half of the pipeline, which is the only half that was validated.

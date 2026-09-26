@@ -1,8 +1,12 @@
-# video-audio-skill
+# opus-video-audio-skill
 
 Two agent skills for producing short videos programmatically — the **audio** (music cues that land on specific timecodes) and the **video** (frames rendered from code, then muxed with ffmpeg).
 
 Built from a real job: a 10-second vertical film, scored and rendered end to end.
+
+## Built for Claude Opus
+
+These skills were written by, and validated with, Claude Opus. They lean on capabilities the pipeline cannot supply by itself: reasoning about framing geometry before rendering, composing a score as explicit note events against a storyboard, and actually reading rendered frames back as images to judge composition. Nothing here has been tested with other models. Another agent can follow the same instructions, but there is no evidence it will reach comparable results, so treat Opus as the supported configuration.
 
 ## Scope, honestly stated
 

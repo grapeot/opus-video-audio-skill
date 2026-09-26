@@ -2,7 +2,7 @@
 
 ## Role
 
-Public repository. Contains an agent-facing skill and a tested helper CLI for producing the **audio** of short videos: composing timed music cues, rendering them locally, normalizing them, and verifying them objectively. Working language: English.
+Repository `opus-video-audio-skill`, designed for and validated with Claude Opus. Contains two agent-facing skills and tested helper CLIs for producing short videos programmatically: the **audio** (composing timed music cues, rendering, normalizing, and verifying them objectively) and the **video** (frames rendered from code, verified, and muxed with ffmpeg). Working language: English.
 
 ## Exact commands
 
@@ -24,14 +24,16 @@ python scripts/score_cue.py render examples/cue_reveal.json --outdir /tmp/score_
 
 ## Structure
 
-- `skills/video-scoring-audio/SKILL.md` — the skill; the primary artifact of this repo
+- `skills/video-scoring-audio/SKILL.md` — the audio skill
+- `skills/procedural-video-frames/SKILL.md` — the video skill
 - `scripts/score_cue.py` — compose → render → normalize → verify CLI
+- `scripts/check_frames.py` — plan / frames / stream verification CLI
 - `examples/cue_reveal.json` — annotated 10s cue spec with a reveal beat at 6.0s
 - `docs/working.md` — changelog and lessons learned
 
 ## Invariants
 
-- **Scope discipline.** Only the audio half of the video pipeline is validated. Do not add video generation, editing, muxing, or codec guidance unless it has been tested in this repository, and mark anything speculative as such. Untested pipeline advice presented as tested is the main way this skill could become harmful.
+- **Scope discipline.** Only what has been exercised on a real job is validated: the audio half and the frame-rendering half. Do not add text-to-video generation, NLE editing, or colour-managed delivery guidance unless it has been tested in this repository, and mark anything speculative as such. Untested pipeline advice presented as tested is the main way this skill could become harmful.
 - **Every claim in the skill is measured or cited.** No assertion about audio quality, no remembered gain or loudness numbers. If a figure changes, re-measure and update it with the new measurement.
 - **`score_cue.py` must exit non-zero on clipping, a duration mismatch, or a missed storyboard beat.** The script's value is that it fails loudly; silent success on broken output defeats the purpose.
 - Never claim a cue sounds good. The script's report ends by saying so explicitly — keep that line.
