@@ -315,6 +315,27 @@ compete with it. A single exposed note on an early visual event can measure
 within a decibel or two of the climax, which flattens the arc; lower it until
 the climax is clearly the loudest window.
 
+### Instrument choice, and a synthesised sound-design layer
+
+General MIDI banks are uneven. Brass sections and timpani are the parts most
+likely to sound like an old ringtone, and a cue built on them was judged cheap.
+Piano, string pads, harp and celesta hold up better. For restrained, premium
+pieces it worked to keep the MIDI score sparse and add a separate
+sound-design layer synthesised with numpy:
+
+- small FM bells (bright attack, inharmonic partials, long ring) for fine
+  metallic events, placed on the picture's own event times;
+- a low swept sine "bloom" under a reveal instead of a drum hit;
+- a quiet bank of high partials with slow amplitude beating for shimmer;
+- a hall made by convolving with exponentially decaying noise (a synthetic
+  impulse response), mixed wet/dry.
+
+Mix the two layers with ffmpeg (`amix` with `normalize=0`, then `loudnorm`),
+trim to length, and measure the final mix against the storyboard like any cue.
+A near-silent window before the reveal (here about -40 dB) is worth checking
+explicitly; it is what makes the reveal land. The aesthetic verdict remains the
+human's.
+
 The spec keeps `bpm` at 60 so one beat equals one second and every `at` value is
 literally a timecode you can read off a storyboard. Each note carries `at`, `note`
 (MIDI number), `vel` and `dur`, plus an optional `why` to record which beat of the
