@@ -240,11 +240,12 @@ inside it is checked any more.
 ## Fast moves over regular patterns: blur along the motion
 
 A page or camera move of a frame height in under a second moves regular detail
-(ruled lines, grids, text) tens of pixels per frame, more than its own spacing,
-which is below the temporal sampling limit and can strobe or appear to run
-backwards. Blur each frame along the motion by
-about half its per-frame displacement (a 180-degree shutter); for a pure vertical
-move a box filter along the rows is enough:
+(ruled lines, grids, text) tens of pixels per frame, more than its own spacing.
+Blur each frame along the motion by about half its per-frame displacement (a
+180-degree shutter); for a pure vertical move a box filter along the rows is
+enough. This was used on every page turn of one film and the mid-turn frames were
+checked; the unblurred version was not rendered, so the strobing it prevents is
+expected from sampling, not observed here (**untested** as a failure).
 
 ```python
 v = (scroll(t + 0.5 / fps) - scroll(t - 0.5 / fps)) * H * 0.5     # px this frame
