@@ -86,7 +86,9 @@ same applies to any front that travels along a curve.
 - **Change an object's representation with a cross-fade of two independently
   shaded layers.** When an object turns from one form into another (intricate
   to plain, open-work to solid), shade both versions completely, each with its
-  own normals and lighting, and blend the two results. A growth or reveal mask
+  own normals and lighting, and blend the two results (blend the results, then
+  composite once: two multiply-blended layers cross-faded on the page darken the
+  middle, see `motion.md`). A growth or reveal mask
   sweeping from one form to the other reads as mechanical, and the human
   reviewer preferred the plain fade. Growth masks are for *making*
   something; cross-fades are for *changing* it.

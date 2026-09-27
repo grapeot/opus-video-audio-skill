@@ -16,7 +16,9 @@ Neither is fixable with parameters.
 Before code, write two or three concepts in a few sentences each -- what is on
 screen, what moves, what the viewer should feel, and the main risk of each --
 and let the human choose. It is cheap, and the choice usually changes the scene
-graph, not just the colours.
+graph, not just the colours. If the human has explicitly delegated the choice
+("do it all, don't stop"), still write the options, pick one, and name the pick
+and its main risk in the delivery, so the decision can be revisited.
 
 When the brief asks for something that looks polished or "expensive", that
 rarely means more symbols. What reliably reads as high production value in

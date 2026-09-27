@@ -7,7 +7,9 @@ breaking the sync.
 
 > Validated on a two-minute horizontal narrated explainer (1080p30, 16 lines,
 > about 45 subtitle cues), voiced twice with two different cloned-voice TTS
-> engines and re-timed each time from the takes alone. Code: `lib/opusvid/narration.py`,
+> engines and re-timed each time from the takes alone, and on a five-minute one
+> (23 lines, about 110 cues, one cloned voice, two lines re-voiced after the
+> transcript check). Code: `lib/opusvid/narration.py`,
 > `scripts/narration_check.py`, `check_frames.py assemble --srt`.
 
 ## Done when
@@ -141,13 +143,14 @@ ones for causes"). Then check, in this order and in separate contexts:
 1. Mechanical: anchors and character caps (a script, not a reading).
 2. Facts: compare the rewrite against the previous draft and the sources, listing
    every drift in numbers, names, attribution and strength of claims.
-   If the writing workflow's prose linter was built for articles, it flags every
-   voice line as a one-sentence paragraph and asks for section headings; lint a view
-   of the script grouped into acts and paragraphs rather than loosening the linter.
 3. A cold read by a reader who sees only the narration: can they restate each line
    in plain words after hearing it once, and does the narrator sound like a peer or
    a lecturer? This caught a line that listed four terms the film never explains;
    the fix was upstream (the line's brief asked for a list), not in the wording.
+
+If the writing workflow also runs a prose linter built for articles, it flags every
+voice line as a one-sentence paragraph and asks for section headings; lint a view of
+the script grouped into acts and paragraphs rather than loosening the linter.
 
 ## Mixing the voice with music
 

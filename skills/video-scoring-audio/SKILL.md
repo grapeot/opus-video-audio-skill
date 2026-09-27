@@ -30,8 +30,9 @@ description: >
 
 This skill covers producing a finished audio cue: composing it, rendering it,
 normalizing it, and proving it has the properties you claim. It was extracted
-from building a 10-second vertical video's music and SFX bed, and extended on a
-two-minute narrated explainer whose music and effects sit under a voice.
+from building a 10-second vertical video's music and SFX bed, and extended on
+two narrated explainers (two and five minutes) whose music and effects sit under
+a voice.
 
 The video side lives in `procedural-video-frames` (rendering frames from code,
 camera and framing math, compositing, and ffmpeg assembly). Text-to-video
@@ -118,6 +119,11 @@ Two things in that command earn their place:
 reverb and note releases decay, so a MIDI file of nominal length 10.00s rendered
 to 12.83s in testing (and 13.25s with the larger bank). Hand that to a video edit
 and the audio overruns the cut. Trim explicitly to the cue length.
+
+**Single-pass `loudnorm` is fine for a standalone cue, not for a mix.** It adapts
+its gain over time, so on a mix it reshapes the balance between layers (voice and
+bed, score and sound design); normalise mixes in two passes with `linear=true`
+(see "Music under a voice-over").
 
 **`loudnorm` targets need verifying, not trusting.** `I=-16` clipped at peak
 1.092 on the first attempt. `I=-19:TP=-3:LRA=11` is a reasonable starting point
@@ -246,7 +252,8 @@ independent cross-check of integrated loudness and true peak.
 
 When a film is narrated, the voice is the master clock and the loudest element;
 the music is a bed and the effects punctuate picture events. What held up on a
-two-minute explainer:
+two-minute explainer (and again, with the bed at about -14 dB, on a five-minute
+one: -16.0 LUFS, -1.3 dBTP after normalisation):
 
 - **Place everything on the narration's clock.** Chord changes at the scene
   changes, a sparse piano motif between lines, silence around the one line that
@@ -369,7 +376,8 @@ sound-design layer synthesised with numpy:
 - a hall made by convolving with exponentially decaying noise (a synthetic
   impulse response), mixed wet/dry.
 
-Mix the two layers with ffmpeg (`amix` with `normalize=0`, then `loudnorm`),
+Mix the two layers with ffmpeg (`amix` with `normalize=0`, then a two-pass linear
+`loudnorm` so the balance you set survives),
 trim to length, and measure the final mix against the storyboard like any cue.
 A near-silent window before the reveal (here about -40 dB) is worth checking
 explicitly; it is what makes the reveal land. The aesthetic verdict remains the

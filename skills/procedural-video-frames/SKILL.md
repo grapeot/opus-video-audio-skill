@@ -13,7 +13,10 @@ description: >
   glows/highlights/seams/on-screen text, handing a material layer such as
   cloth to Blender through a coding agent, narrated explainers (timing the
   picture to a voice-over, checking TTS takes by transcription, subtitles,
-  illustration plates printed onto the page), and films cut to an existing song
+  illustration plates printed onto the page), explainers that must not read as
+  slides (sets on one sheet with a sliding camera, persistent elements,
+  element-wise arrivals keyed to words, diagrams drawn in the plates' register),
+  and films cut to an existing song
   (measuring and snapping beats and sung lines, drum-driven glow, one-canvas
   reveals, a vector-display look, nested zooms and video feedback, lyrics placed
   where the picture is empty). Use this skill whenever a task
@@ -23,7 +26,7 @@ description: >
   whenever a camera has to push in, pan or reframe over time; whenever
   compositing a subject over a background with glow, halo, haze or a
   reflection; or whenever a render looks washed out, too dark, flat, cheap,
-  aliased, or has visible seams and edges. Reach for it even when the animation
+  aliased, or has visible seams and edges, or reads as a slideshow. Reach for it even when the animation
   sounds trivial ("just zoom into this image over 10 seconds"), because the
   failure modes here -- inverted exposure laws, off-frame geometry, stale-frame
   review -- are silent and cost whole render passes.
@@ -240,12 +243,14 @@ speed are judged at delivery size. For a phone audience, play the actual file on
 a phone: `scripts/serve_video.py out.mp4` serves only the listed files on the
 local network with the HTTP Range support iOS Safari needs, and prints the URL.
 It binds to all interfaces, so anyone on the same network can fetch the file
-while it runs; stop it (Ctrl-C) as soon as the review is done.
+while it runs; stop it (Ctrl-C) as soon as the review is done. If the default port
+is taken by something else, pass `--port` with a free one.
 
 **Treat the checker's thresholds as defaults, not verdicts.** Generic checks
 (corner brightness, tonal spread, a midline seam, a sharp row or column step)
-fire on intentional choices -- a lit sky, a night scene that is mostly dark, a
-centred subject, a long straight bright edge or wire in the design. When that
+fire on intentional choices -- a lit sky, a paper-coloured page (every
+explainer on a light background fails the corner check), a night scene that is
+mostly dark, a centred subject, a long straight bright edge or wire in the design. When that
 happens, confirm by looking, then relax the check deliberately and say so
 (`--max-corner`, or `--ignore-region x0,y0,x1,y1` around the straight element),
 rather than tuning the image to satisfy the check. Keep each ignored box tight
@@ -281,11 +286,12 @@ never by reading them off a preview. Then a change to the motion moves the
 music with it, and each visual event lands on the first frame after its note's
 onset without hand-tuning.
 
-Mux with an explicit frame rate, and verify rather than assuming:
+Mux with an explicit frame rate, and verify rather than assuming. Prefer
+`check_frames.py assemble` (below); by hand, the equivalent is:
 
 ```bash
 ffmpeg -y -framerate 24 -i frames/f%04d.png -i cue.mp3 \
-  -c:v libx265 -tag:v hvc1 -crf 18 -pix_fmt yuv420p \
+  -c:v libx264 -crf 18 -pix_fmt yuv420p \
   -c:a aac -b:a 192k -shortest -movflags +faststart out.mp4
 
 ffprobe -v error -show_entries stream=codec_type,codec_name,width,height,r_frame_rate \
@@ -293,16 +299,19 @@ ffprobe -v error -show_entries stream=codec_type,codec_name,width,height,r_frame
 ffmpeg -v error -i out.mp4 -f null -          # zero output = clean decode
 ```
 
-`-pix_fmt yuv420p` is what makes the file play outside your own machine. Note
-that **HEVC (libx265) does not decode in some Chrome builds** -- Safari and most
-players are fine, but if the audience is unknown, ship H.264 or offer it
-alongside. A clean decode proves data integrity, not that the shot is any good.
+`-pix_fmt yuv420p` is what makes the file play outside your own machine. H.264
+is the default because **HEVC (libx265, `-tag:v hvc1`) does not decode in some
+Chrome builds**; Safari and most players are fine with HEVC, so offer it only
+alongside H.264 or when the audience is known. Never add a soft subtitle track in
+the same command as `-shortest`: a track whose last cue ends early cuts the film
+there (`assemble` muxes subtitles in a second, stream-copy pass). A clean decode proves data integrity, not that the shot is any good.
 `check_frames.py stream` runs both checks; `check_frames.py assemble` does
 the H.264 mux (refusing a sequence with missing frames) and then runs them.
 
 ## Checklist before declaring a render done
 
-- Concept chosen by the human before building; the message is said on screen
+- Concept chosen by the human before building (or, if the human delegated the
+  choice, chosen by you and stated with its main risk); the message is said on screen
 - References and a rubric gathered; look-dev stills approved before animating
 - An independent critic reviewed the keyframes against the rubric on *this* round
 - Angular-size table printed, and nothing that must be visible is off-frame

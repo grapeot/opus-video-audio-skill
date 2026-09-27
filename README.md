@@ -2,7 +2,7 @@
 
 Two agent skills for producing short videos programmatically — the **audio** (music cues that land on specific timecodes) and the **video** (frames rendered from code, then muxed with ffmpeg).
 
-Built from real jobs: several short vertical films, scored and rendered end to end.
+Built from real jobs: several short vertical films, two narrated explainers (two and five minutes) and a full-length music video, scored and rendered end to end.
 
 ## Built for Claude Opus
 
@@ -10,7 +10,7 @@ These skills were written by, and validated with, Claude Opus. They lean on capa
 
 ## Scope, honestly stated
 
-**Validated and covered:** music cue composition, local synthesis, loudness normalization, tail trimming, objective audio verification, the generative-music API route with its failure modes — and on the video side, camera/framing geometry, linear compositing and tone mapping, field-dependent exposure, halo and seam artifacts, look development with an independent critic, per-pixel detail across a large zoom, reflections, a Blender material layer driven through a coding agent, frame-sequence verification, and ffmpeg assembly. Individual suggestions that were not exercised are marked **untested** in the skill text.
+**Validated and covered:** music cue composition, local synthesis, loudness normalization, tail trimming, objective audio verification, the generative-music API route with its failure modes — and on the video side, camera/framing geometry, linear compositing and tone mapping, field-dependent exposure, halo and seam artifacts, look development with an independent critic, per-pixel detail across a large zoom, reflections, a Blender material layer driven through a coding agent, narrated explainers (voice as the clock, transcript checks, subtitles) and how to keep them from reading as slides, films cut to an existing song, frame-sequence verification, and ffmpeg assembly. Individual suggestions that were not exercised are marked **untested** in the skill text.
 
 **Not covered:** text-to-video generation models, non-linear editors, and colour-managed delivery pipelines. Nothing here was tested against those, so this repository says nothing about them. That gap is deliberate — untested pipeline advice presented as tested is worse than no advice.
 
