@@ -8,8 +8,10 @@ description: >
   shots are geometrically impossible), additive linear compositing with tone
   mapping, exposure that has to change as the field of view changes, glow and
   sprite artifacts, reflections, on-screen text, one timeline shared with the
-  music, and the verification discipline that keeps you from reviewing stale
-  frames or shipping a shot you never actually looked at. Use this skill
+  music, look development with an independent critique loop, rendering exquisite
+  detail across a large continuous zoom, handing material-heavy layers to Blender
+  through a coding agent, and the verification discipline that keeps you from
+  reviewing stale frames or shipping a shot you never actually looked at. Use this skill
   whenever a task involves rendering or animating a short video, reel, short,
   greeting, explainer or title sequence programmatically; whenever frames are
   produced by code (numpy, PIL, matplotlib, Blender scripting) and assembled
@@ -73,6 +75,52 @@ work:
 Avoid procedurally drawn figurative characters (people, animals, mascots). They
 are the fastest route to looking cheap, and a silhouette traced onto data
 rarely holds up. Suggest them through context instead.
+
+## Look development: references, a rubric, stills, and an independent critic
+
+"Premium" is not something you can verify by checking your own code. What
+worked, after several technically clean versions were rejected as kitsch or
+cheap:
+
+1. **Research references before designing.** Have a sub-agent collect 8–12
+   high-end references for the genre (broadcast, museum, brand work, and a few
+   non-local exemplars of the technique you plan) and distil them into a rubric
+   of 6–10 concrete criteria plus the genre's common kitsch traps. In one
+   genre, the first page of search results was mostly templates; the average of
+   those templates is exactly what a first attempt converges to, and exactly
+   what reads as cheap.
+2. **Render look-development stills at final quality before animating.** Three
+   frames (opening, turning point, final) cost seconds to revise; an animation
+   pass costs minutes. Show them to the human and settle the look first.
+3. **Run an independent critic before the human sees anything.** A sub-agent
+   with the rubric, the references and the keyframes (named by timestamp) scores
+   each criterion and ranks the top problems with a concrete fix each. A second
+   pass should check the first review's items as fixed / partly / not fixed.
+   The critic reliably caught things the author had rationalised: a narrow
+   reflection, a straight wire that read as an aliasing artifact, an opening
+   frame that read as a different holiday's symbol.
+4. **Spend the revision on material and light, not on new elements.** Each
+   time something felt "not expensive enough", the tempting fix was to add a
+   symbol; each time, the effective fix was better geometry, a lighting event
+   in the held beat, or a truer material.
+
+Two findings about composition that generalise:
+
+- **Compose the symbol; do not display it.** A national symbol drawn by the
+  action of the film (threads that trace the flag's own construction lines, light
+  that reveals a surface) reads as crafted. The same symbol shown on a screen or
+  billboard inside the scene reads as a template.
+- **Avoid dense regular grids of small repeated units** as the reveal. Ten
+  thousand identical tiles resolving into a picture triggered a strong
+  crowding/trypophobic reaction; a single element that grows, plus light that
+  spreads, carried the same idea without it.
+
+If an image model is available (for example GPT Image 2.5), it is a natural
+tool for step 2 when the concept is still open — quick concept frames to choose
+between directions before any renderer exists — and for static background
+plates that need photographic richness. That use was not exercised in the films
+this skill was built from; treat it as untested and check its output against the
+rubric like anything else.
 
 ## Test every physical detail for perceptibility
 
@@ -244,6 +292,87 @@ A recipe that holds up for a light source over open water (Cox-Munk glitter):
 - Blend distance haze into the water so the horizon dissolves instead of
   ending in a hard line.
 
+## Exquisite detail across a large continuous zoom
+
+A continuous move from a single wire to a whole emblem (two orders of magnitude)
+is a strong "small to grand" reveal, and it can be rendered without meshes:
+
+- **Describe the subject with signed distance fields and evaluate per pixel.**
+  Map each pixel to world coordinates for the current view, compute distances to
+  the subject's curves, turn them into a height field, and take normals from its
+  gradient. The same code then renders a wire filling the frame and the whole
+  object at the far end, with exact detail at every zoom.
+- **Model the real geometry instead of faking it with a texture.** A twisted
+  two-strand wire modelled as two round strands on a helix (pitch about two
+  diameters) read as crafted metal; the same wire with a sinusoidal bump pattern
+  read as a noisy circuit trace. Lit by a single grazing key, each twist gets its
+  own highlight.
+- **Add a level of detail.** When a feature's projected size drops below about
+  5 px, crossfade it to a simpler form (a smooth tube; a whole shaded shape).
+  Otherwise fine structure aliases into dashes and stair-steps exactly where the
+  final frame rests.
+- **Lay motifs out so no boundary slices them.** Deciding per pixel whether a
+  spiral may appear leaves half-arcs wherever a ridge or outline passes, which
+  reads as a boolean error. Decide per motif instead: pack circles into each
+  region (e.g. the incircle of a triangular facet plus chains toward its
+  corners, shrunk away from any border band) and put one whole motif in each.
+  Taper free ends rather than cutting them.
+- **Measure glows and growth fronts in arc length, not angle.** A glint defined
+  as a window in a spiral's angle is a point near the centre and a long band on
+  the outer turns. Scale by radius so it stays a pinpoint.
+- **Animate "being made" along each element's own path.** A single circular
+  reveal front cuts every wire on one circle and reads as a mask. Letting each
+  spiral wind out from its own centre when the front reaches it reads as the
+  object being formed.
+- **Drive the camera through keyframes with a monotone cubic (PCHIP) in log
+  width.** Smoothstep between keys stops at every key; linear width races at
+  the tight end.
+
+## When code alone is not enough: hand the material layer to Blender
+
+Two-and-a-half-D height fields do metal, lacquer and light very well from a
+fixed camera. They do not do believable cloth, true perspective, or physically
+correct depth of field; one film's silk stayed "a gradient with a light shaft"
+through several revisions. If the user has Blender and a coding agent that can
+drive it (in these films, Codex running the model the user specified), split the
+work:
+
+- **The procedural layer owns timing and exact geometry** (here: the growing
+  filigree, the threads, the stars, their contact shadows, the text). The
+  **Blender layer owns the material-heavy plate** (here: the silk).
+- **Write a precise contract for the agent**, and verify it rather than trusting
+  it:
+  - one world coordinate system, with the mapping to Blender axes spelled out;
+  - a per-frame camera file exported from the same timeline module the renderer
+    uses (centre, width, rotation, and any animated scalars);
+  - an orthographic camera with the sensor fit and scale stated, plus a check
+    that projects known points through Blender's actual camera matrix and
+    compares them to the expected pixels (sub-pixel agreement is achievable);
+  - any lighting that must match between layers given as a formula (e.g. the
+    reveal's falloff), not a description;
+  - output format: 16-bit PNG with the Standard view transform, highlights kept
+    below ~0.9 so the procedural layer can be the brightest thing, and a
+    linearisation step (inverse sRGB) before compositing in linear light;
+  - test frames first, which the agent must open and iterate on, then the full
+    sequence, with per-frame timing reported.
+- **Composite in your pipeline, not theirs.** Load the plate, linearise, apply
+  the procedural layer's contact shadows to it, put the procedural elements on
+  top, then tone map once.
+
+Operational notes from running this:
+
+- Blender segfaulted on startup inside the coding agent's default write
+  sandbox; it rendered normally unsandboxed. Run the agent without the sandbox,
+  scope it in the prompt to one directory, and tell it not to touch other
+  processes.
+- The agent inherits workspace rules. One run refused to write its own
+  technical notes because a workspace rule routed prose to another tool; say
+  explicitly which files it should write itself.
+- Pass the model explicitly if the user names one. Metal's first kernel
+  compile took about two minutes; afterwards a 1080×1920 plate frame rendered in
+  about 2.5 s. Render the parts of the film that do not need the plate while the
+  agent works.
+
 ## Seams: draw shared geometry once, across the whole frame
 
 When a frame is assembled from panels (split screen, per-source layers), drawing
@@ -318,8 +447,9 @@ composition. Check at least the opening, each transition beat, and the final
 frame, and crop to full resolution around anything small.
 
 **Treat the checker's thresholds as defaults, not verdicts.** Generic checks
-(corner brightness, tonal spread, a midline seam) will fire on intentional
-choices -- a lit sky, a night scene that is mostly dark, a centred subject. When
+(corner brightness, tonal spread, a midline seam, a sharp row or column step)
+will fire on intentional choices -- a lit sky, a night scene that is mostly dark,
+a centred subject, a long straight bright wire. When
 that happens, confirm by looking, then raise the threshold deliberately and say
 so, rather than tuning the image to satisfy the check.
 
@@ -353,10 +483,13 @@ a different one, which reads as a rendering bug and is not.
 ## Checklist before declaring a render done
 
 - Concept chosen by the human before building; the message is said on screen
+- References and a rubric gathered; look-dev stills approved before animating
+- An independent critic reviewed the keyframes against the rubric
 - Angular-size table printed, and nothing that must be visible is off-frame
 - Every physically true effect checked at the film's time scale
 - Frame corner dark unless lit by design; subject shows real tonal spread
 - No rectangular glow edges on any sprite; no directional weight reaches zero
+- No motif sliced by a boundary; fine detail has a level of detail below ~5 px
 - Reflections at least as wide as their sources; no seam at panel boundaries
 - Frames confirmed to be from this run (process exited, or fresh directory)
 - Opening, each transition beat, and the final frame looked at as images
