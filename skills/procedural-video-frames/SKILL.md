@@ -11,11 +11,14 @@ description: >
   for look development with an independent critic, fine detail across a large
   zoom (SDFs, level of detail, anti-aliasing, growth), reflections on water,
   glows/highlights/seams/on-screen text, handing a material layer such as
-  cloth to Blender through a coding agent, and narrated explainers (timing the
+  cloth to Blender through a coding agent, narrated explainers (timing the
   picture to a voice-over, checking TTS takes by transcription, subtitles,
-  illustration plates printed onto the page). Use this skill whenever a task
+  illustration plates printed onto the page), and films cut to an existing song
+  (measuring and snapping beats and sung lines, drum-driven glow, one-canvas
+  reveals, a vector-display look, nested zooms and video feedback, lyrics placed
+  where the picture is empty). Use this skill whenever a task
   involves rendering or animating a short video, reel, short, greeting,
-  explainer or title sequence programmatically; whenever frames are produced by
+  explainer, music video or title sequence programmatically; whenever frames are produced by
   code (numpy, PIL, matplotlib, Blender scripting) and assembled into an mp4;
   whenever a camera has to push in, pan or reframe over time; whenever
   compositing a subject over a background with glow, halo, haze or a
@@ -29,10 +32,10 @@ description: >
 # Procedural Video: Frames from Code
 
 > Validated on macOS, September 2026, across several short vertical films
-> (10-15s, 24-30fps) and one two-minute horizontal narrated explainer (1080p30),
-> rendered end to end with this pipeline, each taken through multiple full
-> render passes and human review. Anything marked **untested**
-> was not exercised on those films.
+> (10-15s, 24-30fps), one two-minute horizontal narrated explainer (1080p30) and
+> one full-length music video (about 3.5 minutes, 1080p24), rendered end to end
+> with this pipeline, each taken through multiple full render passes and human
+> review. Anything marked **untested** was not exercised on those films.
 > For the audio half -- composing a cue, hitting timecodes, loudness, and the
 > fact that you cannot hear -- see the sibling skill `video-scoring-audio`.
 
@@ -64,7 +67,10 @@ around one `render_frame(i)`, fresh output directory per run, run start for
 log-space width, `solve_time`, a per-frame camera JSON for Blender) and
 `typeset` (glyph masks blended by hand, letter-spaced lines, vertical columns,
 timed reveals) and `narration` (voice takes placed on one clock, the film time
-of a spoken phrase, subtitle cues, SRT). `check_frames.py assemble` muxes and
+of a spoken phrase, subtitle cues, SRT), `placement` (text positioned where
+measured ink is lowest, clearing bands) and `strokefont` (single-stroke vector
+text revealed word by word). `music_timing.py` measures a song: stems, snapped
+beats, a per-frame drum envelope, vocal onsets, sung lines. `check_frames.py assemble` muxes and
 verifies, with `--srt` for a validated soft subtitle track;
 `narration_check.py` transcribes voice takes back against the script. Start from
 `examples/minimal_film/`, which runs the whole loop in three seconds. Keep the
@@ -79,6 +85,7 @@ its trigger applies; they live next to this file.
 |------|------|
 | `lookdev.md` | Before writing any renderer: settling the concept, references and a rubric, look-dev stills, the independent critic loop, illustration plates for explainers (a generated set printed onto the page), sources and consistent numbers on data frames, composing symbols rather than displaying them, density judged at on-screen size, perceptibility of physical effects. Also when a clean render is called cheap, kitsch, monotonous, unclear, or "all text". |
 | `narration.md` | Any voice-over: order of work (script, takes, picture), keying visual beats to spoken phrases, checking takes by transcription, subtitles (burned-in, soft track, SRT), rewriting a script without breaking the sync. |
+| `music_video.md` | Picture cut to an existing song: measuring and snapping beats and sung lines, one event per sung line, drum-driven glow and pen, what reads as remarkable (one-canvas reveals, continuity, perceptible cleverness only), a vector-display look (persistence with the current camera), nested zooms and video feedback, a per-stroke warp hook, lyrics written with the pen and placed where the picture is empty. |
 | `critic_prompt.md` | Every revision round, before the human sees frames: the prompt for the independent art-director sub-agent. |
 | `detail.md` | Crafted detail (wire, filigree, ornament) at very different screen sizes; zooms across orders of magnitude; SDF per-pixel rendering; level of detail; anti-aliasing a height field; motif layout; growth and cross-fades between representations. |
 | `reflections.md` | Water or glossy reflections of a light source; any size carried from one space to another (angular extent, pixel footprint, blur radius). |
@@ -197,6 +204,10 @@ until ! pgrep -f render_film.py >/dev/null; do sleep 15; done
 When a frame contradicts the code, check its modification time before changing
 anything.
 
+**Assert every scripted patch.** A search-and-replace edit that matches nothing
+changes nothing and still "succeeds"; check the match count before spending a
+render pass on it.
+
 **Keep the preview path and the production path the same code.** A preview
 script that reimplements the render loop will drift from it, and then you have
 validated a program you are not shipping. Import the real functions; if that is
@@ -304,6 +315,9 @@ the H.264 mux (refusing a sequence with missing frames) and then runs them.
   (a contact sheet at the beat times), and the file watched on the target device
 - Voice-over: every visual beat keyed to a spoken phrase, every take transcribed
   back and its differences judged, every line subtitled (`narration.md`)
+- Music: sections named from where the voice is, beats and sung lines snapped to
+  onsets, one event per sung line, on-screen text placed by measurement
+  (`music_video.md`)
 - Every frame with a number carries its source; illustrative charts say so
 - `ffprobe` dimensions/fps/duration match intent; `ffmpeg -f null -` is silent
 - Delivery codec matches the audience

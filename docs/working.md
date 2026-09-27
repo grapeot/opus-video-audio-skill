@@ -2,6 +2,10 @@
 
 ## Changelog
 
+### 2026-09-27 — films cut to an existing song
+
+New sub-document `music_video.md` (measure the song first, snap beats and sung lines to onsets, one event per sung line, drum-driven glow and pen, one-canvas reveals and continuity, only perceptible cleverness, vector-display persistence drawn with the current camera, nested zooms and video feedback, a per-stroke warp hook, lyrics written with a single-stroke font and placed by measurement, operational traps), routed from `SKILL.md` with a checklist line and a "assert every scripted patch" rule under verification; two agent-operation notes in `blender_handoff.md` (close stdin when backgrounding, stop child processes). New `scripts/music_timing.py` (`separate` / `analyze` / `audit`; stores timings and word counts, never lyric text; lines snapped to phrase starts), `lib/opusvid/placement.py`, `lib/opusvid/strokefont.py`, and `tests/test_music.py` (16 cases on synthetic audio and ink maps; skipped without librosa / Hershey-Fonts); all 56 tests pass. Details in the "full-length music video" section below. Reviewed against the workspace's skill-writing rules: `music_video.md` got a "Done when" list an agent can check without listening, degraded modes (no demucs, no synced lyrics, no librosa, no Hershey-Fonts), and an unobserved bookend suggestion was cut; a precaution that never failed (trails not crossing a hard cut) is labelled as such.
+
 ### 2026-09-27 — `lib/opusvid`, `check_frames.py assemble`, and a minimal end-to-end example
 
 Across the films so far the same plumbing was written four or five times almost line for line: an argparse block with `--out/--frames/--jobs/--plan` around a `multiprocessing.Pool` with a per-worker initializer; `smooth()`; a PCHIP camera path with width interpolated in log space; bisection for "when does this motion cross X"; a per-frame camera JSON for a Blender layer; and the text helpers (glyph coverage mask, letter-spaced line, one-glyph-per-cell vertical column, blend into the float image, per-character timed reveal, a blurred dark bed under text). That code now lives in `lib/opusvid/` (`runner`, `timeline`, `typeset`), kept deliberately thin: nothing about any film's subject, shading or layout moved in. Two behaviours are new rather than extracted, both answering failures documented in the skill: `runner` refuses to render into a non-empty output directory unless `--overwrite` (stale frames were reviewed more than once), and it records the run start in `run_start.txt` and prints the matching `check_frames.py frames --since` command. `solve_time` scans for the first sign change before bisecting, so it returns the *first* crossing of a non-monotone motion.
@@ -183,3 +187,38 @@ the measured speech and landed 43 real anchors within a median 0.12 s of the
 recogniser timestamps (90th percentile 0.42 s, worst 0.51 s). The motion-blur rule
 in `SKILL.md` now says plainly that the strobing it prevents was not observed.
 
+
+## 2026-09-27 — a full-length music video (`music_video.md`, `music_timing.py`, `placement`, `strokefont`)
+
+A fan music video for an existing song, 3.5 minutes at 1080p24, about 5,100 frames, single-colour vector-display
+look, rendered in numpy with bloom and phosphor trails. The whole first minute is one stroke on one canvas that is
+revealed as a single picture (an eye) at a structural beat; later sections reuse it through nested zooms, video
+feedback, a rewind, a per-stroke scramble and reassembly, and a CRT-off ending. What the passes taught:
+
+- **The first timeline was built from the beat grid and the energy curve and called the first 15 s an intro.** It
+  was the densest singing of the song. The viewer's reaction was that the picture kept showing one point turning
+  into two. Rebuilding from per-line onsets, one visible event per line, fixed it. The "point and dimension"
+  imagery the first cut had put in the opening belonged to a line sung half a minute later.
+- **Timing sources were off.** Beats from the tracker sat a median 29 ms late against percussive onsets across the
+  whole song. Community synced-lyric times had a quarter of lines more than 150 ms off and a maximum of about
+  0.3 s; snapping to vocal-stem onsets moved several visible hits (a merge flash, a hard cut) by about 0.2 s,
+  which the viewer had noticed as "small offsets". The synthetic test then exposed a second error: nearest-onset
+  snapping picks the second syllable when the timestamp is late; phrase starts fixed it.
+- **Glow from a drum envelope**, not the grid; luminance-envelope correlation over the sparsest passage was 0.59.
+  Expanding rings on kicks were removed as stock.
+- **Concept round.** The viewer rejected a proposal to drive Lissajous figures with the song's real harmony as
+  invisible to anyone watching, questioned the return on a physically modelled phosphor, and accepted the
+  one-canvas reveal, continuity and syllable-driven pen. 3D passages were deferred once the flat language was
+  argued as the song's own and 3D as a reserved event.
+- **Persistence trails first ghosted the whole frame** during camera moves because each past sub-frame used its
+  own camera; drawing the past with the current camera left only moving ink trailing.
+- **Lyrics.** The text came from a file the user supplied. The first placement rule (upper or lower third,
+  alternating) put words over heavy elements repeatedly; stacked lines 30-40 px apart read as overlap; faint
+  remnants carried by the camera landed on later scenes. Measured placement (five samples per line, 40 positions,
+  three sizes), screen anchoring above a 2.5x zoom ratio, a clearing band, box-overlap wiping and no remnants
+  brought the worst-decile placement cost from 0.69 to 0.17; the viewer's complaint was overlap, and review was
+  done on the worst-cost lines.
+- **Tooling.** A scripted `str.replace` that matched nothing silently cost one full render. A heredoc-fed
+  multiprocessing preview failed under spawn. A backgrounded coding agent waited on stdin until started with
+  `< /dev/null`; killing it left its Blender children running. librosa segfaulted in `beat_track` after an
+  interrupted run until the numba cache was cleared.
