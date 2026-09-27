@@ -82,6 +82,16 @@ class Placement(unittest.TestCase):
 
 
 class Text(unittest.TestCase):
+    def test_chunk_hard_splits_long_unpunctuated_clauses(self):
+        s = "这是一个非常长而且中间完全没有任何标点符号的句子它一直往下说到三万零两百零四美元为止"
+        out = chunk(s, limit=22)
+        self.assertGreater(len(out), 1)
+        self.assertTrue(all(len(x) <= 24 for x in out), out)
+        self.assertEqual("".join(out), s)
+        out = chunk("拍卖价从每公斤一百美元一路涨到了每公斤30,204美元再回落到18,004美元左右", limit=12)
+        self.assertTrue(any("30,204" in x for x in out), out)
+        self.assertTrue(any("18,004" in x for x in out), out)
+
     def test_chunk_keeps_decimals_and_splits_sentences(self):
         self.assertEqual(chunk("从 10.2% 一路涨到了 22.7%。"), ["从 10.2% 一路涨到了 22.7%"])
         out = chunk("账单已经出来了，两年里多付了 9.42 亿美元。其中六点五三亿来自次要诊断。", limit=22)

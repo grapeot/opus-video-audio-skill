@@ -74,6 +74,10 @@ illustration plates inside a film is covered below and was exercised.
 
 ## Explainers: give the eye something to look at
 
+For structure and motion (sets on one sheet, elements that persist, element-wise
+arrivals, drawing diagrams in the plates' register) read `motion.md`; this section
+covers the plates themselves.
+
 A narrated explainer built only from typography and charts reads as dull, however
 clean. The request that came back on one was, in effect, "it is all text; find or
 generate some visuals". Plan figurative plates from the start: the places, objects

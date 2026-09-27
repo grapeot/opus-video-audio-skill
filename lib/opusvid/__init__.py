@@ -6,6 +6,7 @@ Only the code that every film of this kind ends up rewriting lives here:
   timeline  easing, named events, a PCHIP camera path, solve_time, camera export
   typeset   glyph masks, letter-spaced lines, vertical columns, timed reveals
   narration voice takes on one clock, when a phrase is spoken, subtitles, SRT
+  motion    element-wise motion: pen, print-in, ink cross-fades, motes, set camera, sprites
 
 Everything that makes a film *that* film -- its subject, shading, layout -- stays
 in the film's own script. This is a toolkit, not a framework.
@@ -17,4 +18,4 @@ Dependencies: numpy, scipy (PCHIP, Gaussian blur) and Pillow. The package
 import itself pulls in nothing; each module imports what it needs.
 """
 
-__all__ = ["runner", "timeline", "typeset", "narration"]
+__all__ = ["runner", "timeline", "typeset", "narration", "motion"]

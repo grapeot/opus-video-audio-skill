@@ -32,8 +32,8 @@ description: >
 # Procedural Video: Frames from Code
 
 > Validated on macOS, September 2026, across several short vertical films
-> (10-15s, 24-30fps), one two-minute horizontal narrated explainer (1080p30) and
-> one full-length music video (about 3.5 minutes, 1080p24), rendered end to end
+> (10-15s, 24-30fps), a two-minute and a five-minute horizontal narrated explainer
+> (1080p30) and one full-length music video (about 3.5 minutes, 1080p24), rendered end to end
 > with this pipeline, each taken through multiple full render passes and human
 > review. Anything marked **untested** was not exercised on those films.
 > For the audio half -- composing a cue, hitting timecodes, loudness, and the
@@ -68,8 +68,11 @@ log-space width, `solve_time`, a per-frame camera JSON for Blender) and
 `typeset` (glyph masks blended by hand, letter-spaced lines, vertical columns,
 timed reveals) and `narration` (voice takes placed on one clock, the film time
 of a spoken phrase, subtitle cues, SRT), `placement` (text positioned where
-measured ink is lowest, clearing bands) and `strokefont` (single-stroke vector
-text revealed word by word). `music_timing.py` measures a song: stems, snapped
+measured ink is lowest, clearing bands), `strokefont` (single-stroke vector
+text revealed word by word) and `motion` (a pen tracing a curve by arc length,
+plates that ink in, true cross-fades of multiply plates, particles on their own
+clocks, rolling counters, a camera sliding between sets on one sheet, sprites cut
+out of one generated plate). `music_timing.py` measures a song: stems, snapped
 beats, a per-frame drum envelope, vocal onsets, sung lines. `check_frames.py assemble` muxes and
 verifies, with `--srt` for a validated soft subtitle track;
 `narration_check.py` transcribes voice takes back against the script. Start from
@@ -85,6 +88,7 @@ its trigger applies; they live next to this file.
 |------|------|
 | `lookdev.md` | Before writing any renderer: settling the concept, references and a rubric, look-dev stills, the independent critic loop, illustration plates for explainers (a generated set printed onto the page), sources and consistent numbers on data frames, composing symbols rather than displaying them, density judged at on-screen size, perceptibility of physical effects. Also when a clean render is called cheap, kitsch, monotonous, unclear, or "all text". |
 | `narration.md` | Any voice-over: order of work (script, takes, picture), keying visual beats to spoken phrases, checking takes by transcription, subtitles (burned-in, soft track, SRT), rewriting a script without breaking the sync. |
+| `motion.md` | Any explainer longer than a minute, or a render called "a slideshow" or static: one sheet with a camera and sets instead of cuts, elements that persist and change in place, the vocabulary of element-wise arrivals keyed to words, drawing diagrams in the plates' register (hatching, sprites cut from plates), multiply cross-fade and other traps, the title card. |
 | `music_video.md` | Picture cut to an existing song: measuring and snapping beats and sung lines, one event per sung line, drum-driven glow and pen, what reads as remarkable (one-canvas reveals, continuity, perceptible cleverness only), a vector-display look (persistence with the current camera), nested zooms and video feedback, a per-stroke warp hook, lyrics written with the pen and placed where the picture is empty. |
 | `critic_prompt.md` | Every revision round, before the human sees frames: the prompt for the independent art-director sub-agent. |
 | `detail.md` | Crafted detail (wire, filigree, ornament) at very different screen sizes; zooms across orders of magnitude; SDF per-pixel rendering; level of detail; anti-aliasing a height field; motif layout; growth and cross-fades between representations. |
@@ -315,6 +319,8 @@ the H.264 mux (refusing a sequence with missing frames) and then runs them.
   (a contact sheet at the beat times), and the file watched on the target device
 - Voice-over: every visual beat keyed to a spoken phrase, every take transcribed
   back and its differences judged, every line subtitled (`narration.md`)
+- Explainer: no beat-time keyframe reads as a static slide; related scenes share one
+  canvas; drawn diagrams and plates judged together as one register (`motion.md`)
 - Music: sections named from where the voice is, beats and sung lines snapped to
   onsets, one event per sung line, on-screen text placed by measurement
   (`music_video.md`)

@@ -348,5 +348,23 @@ class Assemble(unittest.TestCase):
             self.assertEqual(r.returncode, 1, r.stdout)
             self.assertIn("past the picture", r.stdout)
 
+    def test_subtitles_ending_early_do_not_shorten_the_film(self):
+        with tempfile.TemporaryDirectory() as d:
+            fr = Path(d) / "frames"
+            fr.mkdir()
+            write_frames(fr, n=36)                      # 3.0 s at 12 fps
+            write_tone(Path(d) / "cue.wav", 3.0)
+            early = Path(d) / "early.srt"
+            early.write_text("1\n00:00:00,100 --> 00:00:00,800\n只有开头一句\n\n", encoding="utf-8")
+            out = Path(d) / "early.mp4"
+            r = run_check("assemble", fr, "--fps", "12", "--audio", Path(d) / "cue.wav",
+                          "--srt", early, "--srt-lang", "chi", "--out", out)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                                        "-of", "csv=p=0", str(out)], capture_output=True, text=True).stdout)
+            self.assertAlmostEqual(dur, 3.0, delta=0.1)
+            self.assertFalse(any(p.name.endswith(".av.tmp.mp4") for p in Path(d).iterdir()))
+
+
 if __name__ == "__main__":
     unittest.main()
