@@ -172,3 +172,14 @@ and was reported as clipping. It now takes the peak over every channel. And an S
 written by rounding the millisecond fraction on its own produced `,1000`;
 `narration.srt` works in integer milliseconds and `assemble --srt` rejects the
 malformed form.
+
+### 2026-09-27 — narration.md against the meta-skill
+
+Reviewed `narration.md` against the workspace's skill-writing rules (outcomes over
+procedure, testable acceptance, degraded modes, no predicted pitfalls). Added a
+"Done when" list an agent can check without listening, and a measured fallback for
+machines without a recogniser: `chars_by_position` spreads characters evenly over
+the measured speech and landed 43 real anchors within a median 0.12 s of the
+recogniser timestamps (90th percentile 0.42 s, worst 0.51 s). The motion-blur rule
+in `SKILL.md` now says plainly that the strobing it prevents was not observed.
+

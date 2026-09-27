@@ -55,7 +55,7 @@ python -m unittest discover -s tests -v
   - `runner.py` — frame-render CLI + worker pool around `render_frame(i)`; fresh output dirs; run start for `--since`
   - `timeline.py` — easing, `Events`, PCHIP `CameraPath` (log-space width), `solve_time`, `world_to_pixel`, `export_camera_json`
   - `typeset.py` — glyph masks, letter-spaced lines, vertical columns, float blending, timed reveals, soft bed
-  - `narration.py` — `speech_extent`, `Narration` (placement, `at`, `char_times`, `subtitles`), `chunk`, `srt`
+  - `narration.py` — `speech_extent`, `Narration` (placement, `at`, `char_times`, `subtitles`), `chunk`, `srt`, `chars_by_position` (no-recogniser fallback)
 - `tests/test_scripts.py` — unittest coverage for `check_frames.py sheet`, `--ignore-region`, and `serve_video.py`
 - `tests/test_opusvid.py` — unittest coverage for `lib/opusvid` and `check_frames.py assemble` (including `--srt`)
 - `tests/test_narration.py` — `lib/opusvid/narration`, `narration_check.py`'s pure helpers, and `score_cue.py measure` on correlated stereo

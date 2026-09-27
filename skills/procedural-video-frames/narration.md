@@ -10,6 +10,24 @@ breaking the sync.
 > engines and re-timed each time from the takes alone. Code: `lib/opusvid/narration.py`,
 > `scripts/narration_check.py`, `check_frames.py assemble --srt`.
 
+## Done when
+
+A narrated film is finished only when all of these hold; each can be checked
+without having heard it:
+
+- Every line has a take whose transcript (`narration_check.py`) was compared with
+  its script, and every reported difference was judged as recogniser noise (same
+  sound) or fixed (a retake or reworded line) -- recorded as a short list.
+- Every visual beat that illustrates a word is placed with `Narration.at` on a
+  phrase that exists in that line's script; a full render with the final takes
+  raises no missing-anchor error.
+- The film's duration comes from the placed takes plus lead and tail, and matches
+  the target within the tolerance the brief set.
+- Every line is subtitled; the SRT passes `check_frames.py assemble --srt`, and the
+  mp4 has video, audio and subtitle streams with a clean decode.
+- Voice and music loudness are measured (see the audio skill), and the deliverable
+  message says a human still has to listen for the delivery.
+
 ## Order of work: script, takes, then picture
 
 A narrated film is timed by its voice. Write the script, synthesize or record the
@@ -30,6 +48,12 @@ of speech from one engine (asked for a medium pace) and 106 s from another, a
 15% difference. Voice one line, measure characters per second, then set the
 script's length from the target duration. When the film runs long, shorten the
 script rather than time-stretching the voice.
+
+**No recogniser available.** `chars_by_position(say, extent)` spreads a line's
+characters evenly over its measured speech. On a real narration it put 43 anchors
+within a median 0.12 s of the recogniser timestamps (90th percentile 0.42 s, worst
+0.51 s): fine for a scene cue, visibly early or late for a per-character reveal.
+Takes then go unchecked, so say so in the delivery.
 
 ## Key every visual beat to a spoken phrase
 

@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "lib"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from opusvid.narration import (Narration, chars_from_words, chunk, norm,  # noqa: E402
+from opusvid.narration import (Narration, chars_by_position, chars_from_words, chunk, norm,  # noqa: E402
                                speech_extent, srt, srt_time)
 import narration_check  # noqa: E402
 
@@ -95,6 +95,15 @@ class Text(unittest.TestCase):
         self.assertEqual(srt_time(3725.5), "01:02:05,500")
         text = srt([(0.9, 2.75, "一"), (2.75, 6.0, "二")])
         self.assertTrue(text.startswith("1\n00:00:00,900 --> 00:00:02,750\n一\n\n2\n"))
+
+    def test_chars_by_position_spans_the_speech(self):
+        ch = chars_by_position("智能越便宜，账单越贵。", (0.3, 2.1, 2.5))
+        self.assertEqual("".join(c for c, _, _ in ch), "智能越便宜账单越贵")
+        self.assertAlmostEqual(ch[0][1], 0.3)
+        self.assertAlmostEqual(ch[-1][2], 2.1)
+        N = Narration([{"id": "a", "say": "智能越便宜，账单越贵。", "gap": 0.3}], {"a": (0.3, 2.1, 2.5)},
+                      {"a": ch}, lead=0.0)
+        self.assertAlmostEqual(N.at("a", "账单"), N.seg("a")[0] + 0.06 + 5 * 0.2)
 
     def test_chars_from_words_spreads_each_word(self):
         ch = chars_from_words([{"word": " 保险", "start": 1.0, "end": 1.4},
