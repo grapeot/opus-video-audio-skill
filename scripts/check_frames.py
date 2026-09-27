@@ -449,15 +449,15 @@ def cmd_assemble(a):
             return 1
         print(f"{len(cues)} subtitle cues from {a.srt} -> soft track ({a.srt_lang})")
 
+    # Subtitles are muxed in a second, stream-copy pass: with -shortest in the
+    # same command, a subtitle track whose last cue ends before the picture cuts
+    # the whole film at that cue (a 297 s film came out 293.8 s).
+    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    av_out = str(Path(a.out).with_suffix(".av.tmp.mp4")) if a.srt else a.out
     cmd = ["ffmpeg", "-v", "error", "-y",
            "-framerate", f"{a.fps:g}", "-start_number", str(first), "-i", pattern]
     if a.audio:
         cmd += ["-i", a.audio]
-    if a.srt:
-        cmd += ["-i", a.srt]
-        cmd += ["-map", "0:v:0"] + (["-map", "1:a:0"] if a.audio else [])
-        cmd += ["-map", f"{2 if a.audio else 1}:s:0", "-c:s", "mov_text",
-                "-metadata:s:s:0", f"language={a.srt_lang}"]
     if a.scale:
         cmd += ["-vf", f"scale={ow}:{oh}:flags=lanczos"]
     cmd += ["-c:v", "libx264", "-preset", a.preset, "-crf", str(a.crf),
@@ -466,12 +466,21 @@ def cmd_assemble(a):
         # -shortest ends the file with the picture if the cue runs long; a cue that
         # is too SHORT then shows up as a duration mismatch in the stream check
         cmd += ["-c:a", "aac", "-b:a", a.audio_bitrate, "-shortest"]
-    cmd += ["-movflags", "+faststart", a.out]
-    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    cmd += ["-movflags", "+faststart", av_out]
     enc = subprocess.run(cmd, capture_output=True, text=True)
     if enc.returncode != 0:
         print("FAIL  ffmpeg:", enc.stderr.strip()[-600:])
         return 1
+    if a.srt:
+        mux = ["ffmpeg", "-v", "error", "-y", "-i", av_out, "-i", a.srt,
+               "-map", "0:v:0"] + (["-map", "0:a:0"] if a.audio else []) + \
+              ["-map", "1:s:0", "-c:v", "copy", "-c:a", "copy", "-c:s", "mov_text",
+               "-metadata:s:s:0", f"language={a.srt_lang}", "-movflags", "+faststart", a.out]
+        enc = subprocess.run(mux, capture_output=True, text=True)
+        Path(av_out).unlink(missing_ok=True)
+        if enc.returncode != 0:
+            print("FAIL  ffmpeg (subtitle mux):", enc.stderr.strip()[-600:])
+            return 1
 
     print()
     check = argparse.Namespace(path=a.out, expect_duration=duration,

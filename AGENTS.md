@@ -50,6 +50,7 @@ python -m unittest discover -s tests -v
   - `sprites_text.md` — glows and sprites, highlights that read as the wrong object, seams, on-screen text
   - `blender_handoff.md` — handing a material layer to Blender through a coding agent, the contract, elements riding a shared moving surface
   - `narration.md` — voice-over films: takes before picture, beats keyed to spoken phrases, transcription checks, subtitles, script rewrites
+  - `motion.md` — explainers that do not read as slides: sets on one sheet with a camera, persistent elements, element-wise arrivals, diagrams in the plates' register, traps
   - `music_video.md` — films cut to an existing song: measuring and snapping timing, visible beat, one-canvas reveals, vector-display look, nested zooms, video feedback, lyrics placed by measurement
 - `scripts/score_cue.py` — compose → render → normalize → verify CLI
 - `scripts/check_frames.py` — plan / frames / sheet / stream verification CLI, plus `assemble` (mux + stream check)
@@ -63,9 +64,11 @@ python -m unittest discover -s tests -v
   - `narration.py` — `speech_extent`, `Narration` (placement, `at`, `char_times`, `subtitles`), `chunk`, `srt`, `chars_by_position` (no-recogniser fallback)
   - `placement.py` — `ink_integral`, `box_ink`, `candidates`, `choose` (text placed where measured ink is lowest, screen anchoring on big zooms), `clearing_band`
   - `strokefont.py` — Hershey single-stroke text: `layout`, `word_times`, `reveal`, `bbox`
+  - `motion.py` — `pen` (arc-length tracing), `PrintIn`/`apply_mask`, `InkBlend`, `motes`, `SetPan`/`blur_along_x`, `crop_sprites`, `back_out`/`roll`/`stagger`
 - `tests/test_scripts.py` — unittest coverage for `check_frames.py sheet`, `--ignore-region`, and `serve_video.py`
 - `tests/test_opusvid.py` — unittest coverage for `lib/opusvid` and `check_frames.py assemble` (including `--srt`)
 - `tests/test_music.py` — `music_timing.py` on synthetic audio (beat and line snapping, envelope, CLI), `placement`, `strokefont`; skipped without librosa / Hershey-Fonts
+- `tests/test_motion.py` — `lib/opusvid/motion`
 - `tests/test_narration.py` — `lib/opusvid/narration`, `narration_check.py`'s pure helpers, and `score_cue.py measure` on correlated stereo
 - `examples/cue_reveal.json` — annotated 10s cue spec with a reveal beat at 6.0s
 - `examples/minimal_film/` — 3 s, 360x640 end-to-end example and smoke test (shared timeline → frames → cue → mp4)

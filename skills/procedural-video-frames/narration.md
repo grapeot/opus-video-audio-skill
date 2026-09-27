@@ -115,14 +115,19 @@ be read) and what the subtitle shows (digits, units, proper names as written).
 - **Chunk at punctuation, at most about 22 CJK characters, never across a sentence
   end,** and hard-cut between chunks (the text rule in `sprites_text.md`). Each
   chunk starts when its first character is spoken. Keep decimals and percentages
-  whole when splitting.
+  whole when splitting. A clause with no punctuation can still run past the limit
+  (38 characters on one line in practice); `narration.chunk` now splits it at CJK
+  boundaries, leaving numbers and Latin phrases whole.
 - **Burn them in on a fixed band, composited after any motion blur,** so they stay
   sharp during camera moves and page turns; give them a soft bed so they read
   over detailed plates.
 - **Also ship a soft track and an SRT** for platforms that take subtitle files:
   `check_frames.py assemble --srt subs.srt --srt-lang chi` validates the file and
   muxes it as `mov_text`. Write SRT times from integer milliseconds: formatting
-  the fraction separately produced `00:01:41,1000` at 101.9996 s.
+  the fraction separately produced `00:01:41,1000` at 101.9996 s. Mux the soft
+  track in a separate stream-copy pass (`assemble` does): in one ffmpeg command with
+  `-shortest`, a subtitle track whose last cue ends before the picture cut a 297 s
+  film to 293.8 s, at the last cue's end.
 
 ## Rewriting a script without breaking the picture
 
@@ -136,6 +141,9 @@ ones for causes"). Then check, in this order and in separate contexts:
 1. Mechanical: anchors and character caps (a script, not a reading).
 2. Facts: compare the rewrite against the previous draft and the sources, listing
    every drift in numbers, names, attribution and strength of claims.
+   If the writing workflow's prose linter was built for articles, it flags every
+   voice line as a one-sentence paragraph and asks for section headings; lint a view
+   of the script grouped into acts and paragraphs rather than loosening the linter.
 3. A cold read by a reader who sees only the narration: can they restate each line
    in plain words after hearing it once, and does the narrator sound like a peer or
    a lecturer? This caught a line that listed four terms the film never explains;

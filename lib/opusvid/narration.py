@@ -33,6 +33,7 @@ Needs numpy; :func:`speech_extent` also needs the ffmpeg binary.
 """
 from __future__ import annotations
 
+import math
 import re
 import subprocess
 
@@ -117,7 +118,34 @@ def chunk(text: str, limit: int = 22, sentence_min: int = 6):
             cur = ""
     if cur:
         out.append(cur)
-    return [c.strip().rstrip("，。；：,;:.") for c in out if c.strip()]
+    out = [c.strip().rstrip("，。；：,;:.") for c in out if c.strip()]
+    return [piece for c in out for piece in _hard_split(c, limit)]
+
+
+def _cjk(ch: str) -> bool:
+    return "\u3400" <= ch <= "\u9fff"
+
+
+def _hard_split(s: str, limit: int):
+    """A clause with no punctuation inside can still run past ``limit`` (a long
+    Chinese clause). Split it into near-equal pieces, only at a boundary with a CJK
+    character on at least one side, so a number such as ``30,204`` or ``10.3%`` and
+    a Latin phrase stay whole (a clause with no such boundary is left as it is)."""
+    if len(s) <= limit + 2:
+        return [s]
+    n = math.ceil(len(s) / limit)
+    size = math.ceil(len(s) / n)
+    out, i = [], 0
+    while len(s) - i > limit + 2:
+        j = i + size
+        while j < len(s) and not (_cjk(s[j - 1]) or _cjk(s[j])):
+            j += 1
+        if j >= len(s):
+            break
+        out.append(s[i:j].strip())
+        i = j
+    out.append(s[i:].strip())
+    return [x for x in out if x]
 
 
 def srt_time(t: float) -> str:
