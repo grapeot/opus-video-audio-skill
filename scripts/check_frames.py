@@ -24,6 +24,7 @@ Examples
   python check_frames.py stream out.mp4 --expect-duration 10 --expect-fps 24
   python check_frames.py assemble frames_v4 --fps 24 --audio cue.wav --out out.mp4
   python check_frames.py assemble frames_v4 --fps 24 --scale 360x640 --out small.mp4
+  python check_frames.py assemble frames_v4 --fps 30 --audio mix.wav --srt subs.srt --srt-lang chi --out out.mp4
 """
 import argparse
 import json
@@ -291,7 +292,7 @@ def cmd_stream(a):
 
     dur = float(info.get("format", {}).get("duration", 0))
     print(f"{a.path}\n  duration {dur:.3f}s")
-    has_audio = False
+    has_audio = has_subs = False
     for s in info.get("streams", []):
         if s.get("codec_type") == "video":
             fps = s.get("r_frame_rate", "0/1")
@@ -309,11 +310,16 @@ def cmd_stream(a):
         elif s.get("codec_type") == "audio":
             has_audio = True
             print(f"  audio    {s.get('codec_name')}")
+        elif s.get("codec_type") == "subtitle":
+            has_subs = True
+            print(f"  subtitle {s.get('codec_name')}")
     if a.expect_duration and abs(dur - a.expect_duration) > a.duration_tol:
         problems.append(f"duration {dur:.3f}s != expected {a.expect_duration}s "
                         f"(tol {a.duration_tol})")
     if a.require_audio and not has_audio:
         problems.append("no audio stream: the mux dropped the cue")
+    if getattr(a, "require_subtitles", False) and not has_subs:
+        problems.append("no subtitle stream: the mux dropped the SRT")
 
     dec = subprocess.run(["ffmpeg", "-v", "error", "-i", a.path, "-f", "null", "-"],
                          capture_output=True, text=True)
@@ -375,6 +381,44 @@ def frame_sequence(d):
     return str(Path(d) / f"{prefix}%0{width}d.png"), nums[0], len(nums)
 
 
+_SRT_TIME = re.compile(r"^(\d{2}):(\d{2}):(\d{2}),(\d{3}) --> (\d{2}):(\d{2}):(\d{2}),(\d{3})$")
+
+
+def parse_srt(path, duration=None, tol=0.5):
+    """Validate an SRT file strictly; return [(start, end, text)] or raise ValueError.
+
+    Catches what players silently mangle: a millisecond field rounded up to four
+    digits (",1000"), cues out of order, a cue that ends before it starts, and cues
+    running past the end of the picture."""
+    blocks = [b for b in Path(path).read_text(encoding="utf-8-sig").replace("\r\n", "\n").split("\n\n")
+              if b.strip()]
+    cues, last = [], -1.0
+    for k, b in enumerate(blocks, 1):
+        lines = b.strip("\n").split("\n")
+        if len(lines) < 3 or not lines[0].strip().isdigit():
+            raise ValueError(f"cue {k}: expected an index line, a time line and text")
+        m = _SRT_TIME.match(lines[1].strip())
+        if not m:
+            raise ValueError(f"cue {k}: bad time line {lines[1].strip()!r} "
+                             f"(HH:MM:SS,mmm --> HH:MM:SS,mmm, milliseconds 000-999)")
+        g = [int(v) for v in m.groups()]
+        if g[1] > 59 or g[2] > 59 or g[5] > 59 or g[6] > 59:
+            raise ValueError(f"cue {k}: minutes/seconds above 59 in {lines[1].strip()!r}")
+        a = g[0] * 3600 + g[1] * 60 + g[2] + g[3] / 1000
+        e = g[4] * 3600 + g[5] * 60 + g[6] + g[7] / 1000
+        if e <= a:
+            raise ValueError(f"cue {k}: ends at {e:.3f}s, not after its start {a:.3f}s")
+        if a < last:
+            raise ValueError(f"cue {k}: starts at {a:.3f}s, before the previous cue")
+        if duration is not None and e > duration + tol:
+            raise ValueError(f"cue {k}: ends at {e:.3f}s, past the picture ({duration:.3f}s)")
+        last = a
+        cues.append((a, e, "\n".join(lines[2:])))
+    if not cues:
+        raise ValueError("no cues")
+    return cues
+
+
 def cmd_assemble(a):
     try:
         pattern, first, n = frame_sequence(a.directory)
@@ -383,6 +427,9 @@ def cmd_assemble(a):
         return 1
     if a.audio and not Path(a.audio).exists():
         print(f"FAIL  audio file not found: {a.audio}")
+        return 1
+    if a.srt and not Path(a.srt).exists():
+        print(f"FAIL  subtitle file not found: {a.srt}")
         return 1
     with Image.open(pattern % first) as im:
         fw, fh = im.size
@@ -394,11 +441,23 @@ def cmd_assemble(a):
     duration = n / a.fps
     print(f"{n} frames {fw}x{fh} from {pattern} (first {first}) at {a.fps:g}fps "
           f"= {duration:.3f}s -> {a.out} ({ow}x{oh})")
+    if a.srt:
+        try:
+            cues = parse_srt(a.srt, duration)
+        except ValueError as e:
+            print(f"FAIL  {a.srt}: {e}")
+            return 1
+        print(f"{len(cues)} subtitle cues from {a.srt} -> soft track ({a.srt_lang})")
 
     cmd = ["ffmpeg", "-v", "error", "-y",
            "-framerate", f"{a.fps:g}", "-start_number", str(first), "-i", pattern]
     if a.audio:
         cmd += ["-i", a.audio]
+    if a.srt:
+        cmd += ["-i", a.srt]
+        cmd += ["-map", "0:v:0"] + (["-map", "1:a:0"] if a.audio else [])
+        cmd += ["-map", f"{2 if a.audio else 1}:s:0", "-c:s", "mov_text",
+                "-metadata:s:s:0", f"language={a.srt_lang}"]
     if a.scale:
         cmd += ["-vf", f"scale={ow}:{oh}:flags=lanczos"]
     cmd += ["-c:v", "libx264", "-preset", a.preset, "-crf", str(a.crf),
@@ -417,7 +476,8 @@ def cmd_assemble(a):
     print()
     check = argparse.Namespace(path=a.out, expect_duration=duration,
                                duration_tol=a.duration_tol, expect_fps=a.fps,
-                               require_audio=bool(a.audio), expect_size=(ow, oh))
+                               require_audio=bool(a.audio), expect_size=(ow, oh),
+                               require_subtitles=bool(a.srt))
     return cmd_stream(check)
 
 
@@ -481,6 +541,9 @@ def main():
     m.add_argument("--scale", type=_size, metavar="WxH",
                    help="resize on encode, e.g. 360x640 for a small preview")
     m.add_argument("--audio-bitrate", default="192k")
+    m.add_argument("--srt", help="SRT to validate and mux as a soft subtitle track (mov_text); "
+                                 "burned-in subtitles belong in the frames themselves")
+    m.add_argument("--srt-lang", default="und", help="ISO 639-2 language of the SRT, e.g. chi, eng")
     m.add_argument("--duration-tol", type=float, default=0.1)
     m.set_defaults(func=cmd_assemble)
 
