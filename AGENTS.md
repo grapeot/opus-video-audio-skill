@@ -28,6 +28,9 @@ python scripts/check_frames.py assemble frames/ --fps 24 --audio out/cue.wav --o
 python scripts/check_frames.py assemble frames/ --fps 30 --audio mix.wav --srt subs.srt --srt-lang chi --out out.mp4
 python scripts/serve_video.py out.mp4 --port 8765     # LAN preview; stop it after review
 python scripts/narration_check.py script.json takes/ --out takes/chars.json   # needs mlx-whisper
+python scripts/music_timing.py separate song.m4a --out stems/                 # needs demucs
+python scripts/music_timing.py analyze song.m4a --fps 24 --out timing.json --vocals V.wav --accomp A.wav [--lrc lines.lrc]
+python scripts/music_timing.py audit timing.json                              # needs librosa
 
 # tests for check_frames.py, serve_video.py and lib/opusvid (must pass)
 python -m unittest discover -s tests -v
@@ -47,17 +50,22 @@ python -m unittest discover -s tests -v
   - `sprites_text.md` — glows and sprites, highlights that read as the wrong object, seams, on-screen text
   - `blender_handoff.md` — handing a material layer to Blender through a coding agent, the contract, elements riding a shared moving surface
   - `narration.md` — voice-over films: takes before picture, beats keyed to spoken phrases, transcription checks, subtitles, script rewrites
+  - `music_video.md` — films cut to an existing song: measuring and snapping timing, visible beat, one-canvas reveals, vector-display look, nested zooms, video feedback, lyrics placed by measurement
 - `scripts/score_cue.py` — compose → render → normalize → verify CLI
 - `scripts/check_frames.py` — plan / frames / sheet / stream verification CLI, plus `assemble` (mux + stream check)
 - `scripts/serve_video.py` — serve only the listed video files on the LAN, with HTTP Range, for phone preview
 - `scripts/narration_check.py` — transcribe voice takes, diff them against the script, write per-character timestamps
+- `scripts/music_timing.py` — separate a song's stems, snap beats and sung lines to onsets, per-frame drum envelope, vocal syllable rate; stores timings and word counts, never lyric text
 - `lib/opusvid/` — reusable film plumbing, imported by adding `lib/` to `sys.path` (not installed)
   - `runner.py` — frame-render CLI + worker pool around `render_frame(i)`; fresh output dirs; run start for `--since`
   - `timeline.py` — easing, `Events`, PCHIP `CameraPath` (log-space width), `solve_time`, `world_to_pixel`, `export_camera_json`
   - `typeset.py` — glyph masks, letter-spaced lines, vertical columns, float blending, timed reveals, soft bed
   - `narration.py` — `speech_extent`, `Narration` (placement, `at`, `char_times`, `subtitles`), `chunk`, `srt`, `chars_by_position` (no-recogniser fallback)
+  - `placement.py` — `ink_integral`, `box_ink`, `candidates`, `choose` (text placed where measured ink is lowest, screen anchoring on big zooms), `clearing_band`
+  - `strokefont.py` — Hershey single-stroke text: `layout`, `word_times`, `reveal`, `bbox`
 - `tests/test_scripts.py` — unittest coverage for `check_frames.py sheet`, `--ignore-region`, and `serve_video.py`
 - `tests/test_opusvid.py` — unittest coverage for `lib/opusvid` and `check_frames.py assemble` (including `--srt`)
+- `tests/test_music.py` — `music_timing.py` on synthetic audio (beat and line snapping, envelope, CLI), `placement`, `strokefont`; skipped without librosa / Hershey-Fonts
 - `tests/test_narration.py` — `lib/opusvid/narration`, `narration_check.py`'s pure helpers, and `score_cue.py measure` on correlated stereo
 - `examples/cue_reveal.json` — annotated 10s cue spec with a reveal beat at 6.0s
 - `examples/minimal_film/` — 3 s, 360x640 end-to-end example and smoke test (shared timeline → frames → cue → mp4)

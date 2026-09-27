@@ -109,6 +109,13 @@ it, put the procedural elements on top, then tone map once.
   reliable: one such run stalled on network reconnects, while running the same
   script directly took about 8.5 minutes for 180 frames. Re-dispatch only for
   changes that need new code or new judgement.
+- **Close its stdin when you background it.** A headless agent started with
+  `nohup ... &` can sit waiting for input ("Reading additional input from
+  stdin"); start it with `< /dev/null`, and watch for its process to exit rather
+  than polling its output files.
+- **Stopping it means stopping its children.** Killing the agent leaves the
+  Blender processes it started running; find them by their script names and
+  stop them too, or they keep the GPU busy.
 - **Timing to expect** (1080x1920, Metal): the first kernel compile took about
   two minutes; afterwards a plate frame rendered in about 2.5-3 s. Render the
   parts of the film that do not need the plate while the agent works.
