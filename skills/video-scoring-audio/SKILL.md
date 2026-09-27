@@ -13,7 +13,8 @@ description: >
   whenever audio needs to line up with a storyboard or specific timestamps, when
   choosing between a generative music API and synthesizing it yourself, when
   normalizing loudness or fixing clipping in a rendered cue, or when comparing
-  several instrument or arrangement variants. Reach for it even if the request
+  several instrument or arrangement variants, or when laying a music bed and
+  sound effects under a voice-over. Reach for it even if the request
   sounds simple ("just add some music to this clip"), because the timing,
   clipping and cannot-hear-it failure modes here are silent and ship broken
   output.
@@ -29,7 +30,8 @@ description: >
 
 This skill covers producing a finished audio cue: composing it, rendering it,
 normalizing it, and proving it has the properties you claim. It was extracted
-from building a 10-second vertical video's music and SFX bed.
+from building a 10-second vertical video's music and SFX bed, and extended on a
+two-minute narrated explainer whose music and effects sit under a voice.
 
 The video side lives in `procedural-video-frames` (rendering frames from code,
 camera and framing math, compositing, and ffmpeg assembly). Text-to-video
@@ -197,15 +199,19 @@ computes all of them; the code below is what it does, for when you need it inlin
 import subprocess, numpy as np, math
 
 def load(path, rate=48000):
-    raw = subprocess.run(
-        ["ffmpeg","-v","quiet","-i",path,"-f","f32le","-ac","1","-ar",str(rate),"-"],
-        check=True, stdout=subprocess.PIPE).stdout
-    return np.frombuffer(raw, dtype="<f4"), rate
+    ch = int(subprocess.run(["ffprobe","-v","error","-select_streams","a:0","-show_entries",
+                             "stream=channels","-of","csv=p=0",path],
+                            capture_output=True, text=True).stdout.split()[0])
+    raw = subprocess.run(["ffmpeg","-v","quiet","-i",path,"-f","f32le","-ar",str(rate),"-"],
+                         check=True, stdout=subprocess.PIPE).stdout
+    x = np.frombuffer(raw, dtype="<f4")
+    return x[: len(x) // ch * ch].reshape(-1, ch), rate      # keep the channels
 
-x, sr = load("out.wav")
+xc, sr = load("out.wav")
+x = xc.mean(axis=1)                                  # mono for envelope and centroid
 
-# 1. duration and 2. peak / clipping
-print(len(x)/sr, float(np.max(np.abs(x))))          # peak must stay below 1.0
+# 1. duration and 2. peak / clipping -- over every channel, never after a downmix
+print(len(x)/sr, float(np.max(np.abs(xc))))         # peak must stay below 1.0
 
 # 3. RMS envelope -- does the music follow the storyboard?
 n = sr // 2                                          # half-second windows
@@ -228,7 +234,40 @@ caveat when placing checks -- a single struck note's attack window is genuinely
 loud even in a sparse passage, so verify "quiet" expectations in the gaps between
 notes rather than on an onset, or you will chase a failure that is not there.
 
+Do not let ffmpeg downmix with `-ac 1` before measuring peak. For correlated
+stereo (a mono mix written to both channels, the usual case for a voice-over) it
+sums the channels at about +3 dB: a mix with a true peak of -1.5 dBFS measured
+1.19 and was reported as clipping. `ffmpeg -af ebur128=peak=true -f null -` is an
+independent cross-check of integrated loudness and true peak.
+
 **Spectral centroid** fingerprints timbre. Its real job is the next section.
+
+## Music under a voice-over
+
+When a film is narrated, the voice is the master clock and the loudest element;
+the music is a bed and the effects punctuate picture events. What held up on a
+two-minute explainer:
+
+- **Place everything on the narration's clock.** Chord changes at the scene
+  changes, a sparse piano motif between lines, silence around the one line that
+  must land (the thesis), effects on the picture's own event times (a stamp, a
+  counter landing, each round of an exchange). Compute these times from the same
+  timeline objects the renderer uses.
+- **Set the bed from the voice, then duck it.** Scale the music so its RMS is
+  about 13 dB below the voice's RMS where the voice is active, then duck it a
+  further ~7 dB while anyone speaks: smooth the voice's RMS over ~50 ms, mark
+  where it is above -40 dBFS, smooth that activity over ~350 ms, and turn it into
+  a gain. Measured before normalisation, the voice stem was -24.5 LUFS and the
+  ducked music -40.3 LUFS. Whether that balance is right is a listening
+  judgement; hand it over with the numbers.
+- **Normalise the final mix in two passes, linear.** Run `loudnorm` once with
+  `print_format=json` to measure, then again with the measured values and
+  `linear=true`, which applies one gain instead of dynamically reshaping the mix
+  (the voice-to-music balance stays as set). Write 16-bit PCM explicitly and
+  check the result: the mix above came out at -16.0 LUFS integrated and -1.5 dBFS
+  true peak (`ebur128=peak=true`).
+- **Write stems** (voice, music, effects) next to the mix so the balance can be
+  measured and argued about without re-rendering.
 
 ## Verify that variants are actually different
 

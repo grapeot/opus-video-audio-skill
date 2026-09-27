@@ -129,3 +129,46 @@ frames at the opening, each transition beat, and the end.
 `check_frames.py` verified against this project's real output: passes the good
 render (exit 0), catches the known-bad pass by its seam and halo step at column
 541 (exit 1), validates the finished mp4, and flags stale frames via `--since`.
+
+## 2026-09-27 — narrated explainers
+
+`narration.md`, `lib/opusvid/narration.py`, `scripts/narration_check.py`,
+`check_frames.py assemble --srt`, a `score_cue.py measure` fix, and new sections
+in `lookdev.md`, `sprites_text.md`, `SKILL.md` and the audio skill.
+
+Distilled from a two-minute horizontal explainer of a written article (1080p30,
+16 narrated lines on a ledger-page design), voiced with two cloned-voice TTS
+engines, rewritten once by an external writer, and re-timed from the takes each
+time. What cost the most:
+
+**The voice has to be the clock.** Every beat was keyed to a phrase in a take
+through recogniser character timestamps. That paid off twice: when the second
+voice engine read the same text 15% faster, and when the script was rewritten,
+the whole film re-timed from the new takes; only the handful of anchors whose
+words the rewrite had moved needed editing, and missing anchors failed loudly.
+`lib/opusvid/narration.Narration` reproduces the film's hand-written timeline
+exactly (43 anchors and 46 subtitle cues, zero difference).
+
+**Transcribing takes back finds the errors worth fixing.** Most flagged
+differences across both engines were homophones or digits. A few were ambiguous
+(a syllable that might carry the wrong tone) and were simply voiced again, keeping
+the take with the cleanest transcript. One was unambiguous: a polyphonic character
+read with the wrong reading; rewriting the text around it fixed it, and
+`narration_check.py` shows it as a single merged span.
+
+**All type reads dull.** The first cut was typography and charts only; the viewer
+asked for visuals. A generated set of engraving plates, printed onto the page with
+a multiply blend, fixed it. Small plates came back tinted and glossy, like icons,
+until regenerated as strictly monochrome line work.
+
+**The critic keeps numbers honest.** It caught a mechanism shown two ways that
+disagreed (x1.2 in one scene, x1.6 in the next), missing sources on data frames,
+and a colour reused across meanings. Three critic rounds, each finding fewer and
+smaller problems.
+
+**Two tooling bugs.** `score_cue.py measure` downmixed with `ffmpeg -ac 1`, which
+sums correlated stereo at about +3 dB: a mix peaking at -1.5 dBFS measured 1.19
+and was reported as clipping. It now takes the peak over every channel. And an SRT
+written by rounding the millisecond fraction on its own produced `,1000`;
+`narration.srt` works in integer milliseconds and `assemble --srt` rejects the
+malformed form.

@@ -10,8 +10,10 @@ description: >
   sheets, previewing on a phone, ffmpeg assembly) and routes to sub-documents
   for look development with an independent critic, fine detail across a large
   zoom (SDFs, level of detail, anti-aliasing, growth), reflections on water,
-  glows/highlights/seams/on-screen text, and handing a material layer such as
-  cloth to Blender through a coding agent. Use this skill whenever a task
+  glows/highlights/seams/on-screen text, handing a material layer such as
+  cloth to Blender through a coding agent, and narrated explainers (timing the
+  picture to a voice-over, checking TTS takes by transcription, subtitles,
+  illustration plates printed onto the page). Use this skill whenever a task
   involves rendering or animating a short video, reel, short, greeting,
   explainer or title sequence programmatically; whenever frames are produced by
   code (numpy, PIL, matplotlib, Blender scripting) and assembled into an mp4;
@@ -27,8 +29,9 @@ description: >
 # Procedural Video: Frames from Code
 
 > Validated on macOS, September 2026, across several short vertical films
-> (10-15s, 24-30fps) rendered end to end with this pipeline, each taken through
-> multiple full render passes and human review. Anything marked **untested**
+> (10-15s, 24-30fps) and one two-minute horizontal narrated explainer (1080p30),
+> rendered end to end with this pipeline, each taken through multiple full
+> render passes and human review. Anything marked **untested**
 > was not exercised on those films.
 > For the audio half -- composing a cue, hitting timecodes, loudness, and the
 > fact that you cannot hear -- see the sibling skill `video-scoring-audio`.
@@ -60,7 +63,10 @@ around one `render_frame(i)`, fresh output directory per run, run start for
 `--since`), `timeline` (easing, named `Events`, a PCHIP camera path with
 log-space width, `solve_time`, a per-frame camera JSON for Blender) and
 `typeset` (glyph masks blended by hand, letter-spaced lines, vertical columns,
-timed reveals). `check_frames.py assemble` muxes and verifies. Start from
+timed reveals) and `narration` (voice takes placed on one clock, the film time
+of a spoken phrase, subtitle cues, SRT). `check_frames.py assemble` muxes and
+verifies, with `--srt` for a validated soft subtitle track;
+`narration_check.py` transcribes voice takes back against the script. Start from
 `examples/minimal_film/`, which runs the whole loop in three seconds. Keep the
 film's subject, shading and layout in the film's own script.
 
@@ -71,11 +77,12 @@ its trigger applies; they live next to this file.
 
 | Read | When |
 |------|------|
-| `lookdev.md` | Before writing any renderer: settling the concept, references and a rubric, look-dev stills, the independent critic loop, composing symbols rather than displaying them, density judged at on-screen size, perceptibility of physical effects. Also when a clean render is called cheap, kitsch, monotonous or unclear. |
+| `lookdev.md` | Before writing any renderer: settling the concept, references and a rubric, look-dev stills, the independent critic loop, illustration plates for explainers (a generated set printed onto the page), sources and consistent numbers on data frames, composing symbols rather than displaying them, density judged at on-screen size, perceptibility of physical effects. Also when a clean render is called cheap, kitsch, monotonous, unclear, or "all text". |
+| `narration.md` | Any voice-over: order of work (script, takes, picture), keying visual beats to spoken phrases, checking takes by transcription, subtitles (burned-in, soft track, SRT), rewriting a script without breaking the sync. |
 | `critic_prompt.md` | Every revision round, before the human sees frames: the prompt for the independent art-director sub-agent. |
 | `detail.md` | Crafted detail (wire, filigree, ornament) at very different screen sizes; zooms across orders of magnitude; SDF per-pixel rendering; level of detail; anti-aliasing a height field; motif layout; growth and cross-fades between representations. |
 | `reflections.md` | Water or glossy reflections of a light source; any size carried from one space to another (angular extent, pixel footprint, blur radius). |
-| `sprites_text.md` | Glows, particles, bloom, highlights that read as the wrong thing, rectangles/rays/seams, split-screen panels, and any on-screen text. |
+| `sprites_text.md` | Glows, particles, bloom, highlights that read as the wrong thing, rectangles/rays/seams, split-screen panels, and any on-screen text (mixed-script runs, counters, CJK punctuation). |
 | `blender_handoff.md` | Cloth or another material a height field cannot sell; elements that must ride a moving surface; showing a surface's height under an orthographic camera; dispatching a coding agent to drive Blender. |
 
 ## Reason about framing in angles before you write the render loop
@@ -230,6 +237,24 @@ rather than tuning the image to satisfy the check. Keep each ignored box tight
 around the element: the box's own border does not create a step, but nothing
 inside it is checked any more.
 
+## Fast moves over regular patterns: blur along the motion
+
+A page or camera move of a frame height in under a second moves regular detail
+(ruled lines, grids, text) tens of pixels per frame, more than its own spacing,
+which is below the temporal sampling limit and can strobe or appear to run
+backwards. Blur each frame along the motion by
+about half its per-frame displacement (a 180-degree shutter); for a pure vertical
+move a box filter along the rows is enough:
+
+```python
+v = (scroll(t + 0.5 / fps) - scroll(t - 0.5 / fps)) * H * 0.5     # px this frame
+if v > 1.5:
+    img = uniform_filter1d(img, size=int(round(v)) | 1, axis=0, mode="nearest")
+```
+
+Composite anything that should stay sharp through the move (subtitles, a fixed
+frame) after the blur.
+
 ## Assembly: one timeline, mux, verify the stream
 
 **Share one timeline between picture and music.** Put every beat time in one
@@ -276,5 +301,8 @@ the H.264 mux (refusing a sequence with missing frames) and then runs them.
 - Frames confirmed to be from this run (process exited, or fresh directory)
 - Opening, each transition beat, and the final frame looked at as images
   (a contact sheet at the beat times), and the file watched on the target device
+- Voice-over: every visual beat keyed to a spoken phrase, every take transcribed
+  back and its differences judged, every line subtitled (`narration.md`)
+- Every frame with a number carries its source; illustrative charts say so
 - `ffprobe` dimensions/fps/duration match intent; `ffmpeg -f null -` is silent
 - Delivery codec matches the audience

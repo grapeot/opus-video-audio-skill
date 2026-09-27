@@ -1,0 +1,123 @@
+# Narrated films: the voice is the clock
+
+Part of the `procedural-video-frames` skill. Read this when a film has a voice-over:
+an explainer, a narrated data story, a walkthrough. It covers timing picture to
+speech, checking takes you cannot hear, subtitles, and rewriting a script without
+breaking the sync.
+
+> Validated on a two-minute horizontal narrated explainer (1080p30, 16 lines,
+> about 45 subtitle cues), voiced twice with two different cloned-voice TTS
+> engines and re-timed each time from the takes alone. Code: `lib/opusvid/narration.py`,
+> `scripts/narration_check.py`, `check_frames.py assemble --srt`.
+
+## Order of work: script, takes, then picture
+
+A narrated film is timed by its voice. Write the script, synthesize or record the
+takes, measure them, and only then lay out the picture. Timing a picture to an
+estimated reading speed and fitting the voice afterwards wastes a render pass
+every time a line is rewritten.
+
+**One take per line, one line per picture beat.** A retake then replaces one
+file, and the picture beat it drives moves with it. Lay takes end to end with
+deliberate gaps (about 0.35 s inside a scene, 0.5-0.9 s at a scene change or
+before a line that should land), not with whatever silence the files carry: TTS
+takes start and end with a few hundred milliseconds of silence that differ per
+take, so trim each take to its measured speech (`speech_extent`) plus a small pad.
+
+**Measure the speaking rate before budgeting the script.** Rates differ a lot
+between engines and settings: the same 598-character Chinese script took 121 s
+of speech from one engine (asked for a medium pace) and 106 s from another, a
+15% difference. Voice one line, measure characters per second, then set the
+script's length from the target duration. When the film runs long, shorten the
+script rather than time-stretching the voice.
+
+## Key every visual beat to a spoken phrase
+
+Each visual event should land on the word it illustrates. Get per-character
+timestamps for each take from a speech recogniser (`narration_check.py --out`
+writes them from Whisper word timestamps), and ask for the film time of a phrase
+rather than computing it from character counts:
+
+```python
+N = Narration(segments, extents, chars, lead=0.9, tail=3.6)
+t_count = N.at("s04", "just from these cases")     # counter starts rolling
+t_land  = N.at("s04", "dollars", end=True)          # ... and lands on the last word
+```
+
+Rules that kept the sync honest across rewrites and a change of voice:
+
+- **Anchors must exist in the script, and a missing one must fail.** The recogniser
+  often writes a homophone or digits where the script has words; the lookup then
+  falls back to the phrase's position in the script text, which is close enough
+  for a visual cue. A phrase that is not in the script at all raises, so a
+  rewritten line cannot silently drift its beat.
+- **Keep the anchor list derivable from the code.** When the script is rewritten,
+  extract every anchor phrase the renderer and the mix use, hand them to the
+  writer as must-include phrases per line, and check the new script mechanically
+  (every anchor present, every line within its character cap) before voicing it.
+  A few anchors will still need moving by hand where the new wording changes
+  the order of ideas inside a line; renders fail on a missing anchor, so the
+  first preview finds them.
+- **Derive every other time from the same clock.** Sound effects, the music's
+  scene changes, stacked-object arrival times: compute them from the narration
+  object, never read them off a preview (the shared-timeline rule in `SKILL.md`).
+
+## Checking takes you cannot hear
+
+An agent cannot listen to a take, so transcribe it back and compare it with the
+script (`narration_check.py`). The comparison is a review aid, not a verdict:
+
+- **Same sound, different characters is recogniser noise.** Homophones, digits
+  for spelled-out numbers, a foreign name spelled oddly: ignore them. An English
+  word transcribed strangely may still be pronounced correctly.
+- **Different sound is a real error.** In practice this was a polyphonic
+  character read with the wrong reading (a Chinese 重 read as *zhòng* instead of
+  *chóng*, which the recogniser heard as a different word). Fix it by rewriting
+  the text around the character, then voice it again and re-check.
+- **Voice two or three takes of a flagged line and keep the one whose transcript
+  is cleanest.** Takes of the same text vary; transcripts of the variants were
+  enough to choose between them.
+- A clean transcript still does not mean the delivery is right. Say so, and have
+  a human listen before the voice ships.
+
+Keep two texts per line: what the voice says (numbers spelled out as they should
+be read) and what the subtitle shows (digits, units, proper names as written).
+
+## Subtitles
+
+- **Subtitle every line by default.** Skipping a line because the same words are
+  on screen (a title card, an on-screen quote) reads as a gap to viewers; the
+  request after such a cut was simply "include subtitles".
+- **Chunk at punctuation, at most about 22 CJK characters, never across a sentence
+  end,** and hard-cut between chunks (the text rule in `sprites_text.md`). Each
+  chunk starts when its first character is spoken. Keep decimals and percentages
+  whole when splitting.
+- **Burn them in on a fixed band, composited after any motion blur,** so they stay
+  sharp during camera moves and page turns; give them a soft bed so they read
+  over detailed plates.
+- **Also ship a soft track and an SRT** for platforms that take subtitle files:
+  `check_frames.py assemble --srt subs.srt --srt-lang chi` validates the file and
+  muxes it as `mov_text`. Write SRT times from integer milliseconds: formatting
+  the fraction separately produced `00:01:41,1000` at 101.9996 s.
+
+## Rewriting a script without breaking the picture
+
+When the script is rewritten by another model or a human after the picture exists,
+give the writer a packet, not the conversation: the facts it may use with their
+sources and strength, a per-line table (what is on screen, what the line must say,
+its anchor phrases, a character cap), and a description of the voice ("explaining
+something you figured out to a colleague, short sentences for judgements, longer
+ones for causes"). Then check, in this order and in separate contexts:
+
+1. Mechanical: anchors and character caps (a script, not a reading).
+2. Facts: compare the rewrite against the previous draft and the sources, listing
+   every drift in numbers, names, attribution and strength of claims.
+3. A cold read by a reader who sees only the narration: can they restate each line
+   in plain words after hearing it once, and does the narrator sound like a peer or
+   a lecturer? This caught a line that listed four terms the film never explains;
+   the fix was upstream (the line's brief asked for a list), not in the wording.
+
+## Mixing the voice with music
+
+Keep the music well under the voice and duck it further while someone speaks; the
+audio skill (`video-scoring-audio`) has the numbers and the loudness procedure.
