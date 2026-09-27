@@ -321,5 +321,32 @@ class Assemble(unittest.TestCase):
             self.assertIn("even", r.stdout)
 
 
+    def test_srt_is_validated_and_muxed_as_a_soft_track(self):
+        with tempfile.TemporaryDirectory() as d:
+            fr = Path(d) / "frames"
+            fr.mkdir()
+            write_frames(fr, n=12)
+            write_tone(Path(d) / "cue.wav", 1.0)
+            good = Path(d) / "good.srt"
+            good.write_text("1\n00:00:00,100 --> 00:00:00,600\n第一句\n\n"
+                            "2\n00:00:00,600 --> 00:00:00,950\nsecond\n\n", encoding="utf-8")
+            out = Path(d) / "subs.mp4"
+            r = run_check("assemble", fr, "--fps", "12", "--audio", Path(d) / "cue.wav",
+                          "--srt", good, "--srt-lang", "chi", "--out", out)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.assertIn("2 subtitle cues", r.stdout)
+            self.assertIn("subtitle mov_text", r.stdout)
+            bad = Path(d) / "bad.srt"
+            bad.write_text("1\n00:00:00,100 --> 00:00:00,1000\nx\n\n", encoding="utf-8")
+            r = run_check("assemble", fr, "--fps", "12", "--srt", bad, "--out", Path(d) / "b.mp4")
+            self.assertEqual(r.returncode, 1, r.stdout)
+            self.assertIn("milliseconds", r.stdout)
+            self.assertFalse((Path(d) / "b.mp4").exists())
+            late = Path(d) / "late.srt"
+            late.write_text("1\n00:00:00,100 --> 00:00:05,000\nx\n\n", encoding="utf-8")
+            r = run_check("assemble", fr, "--fps", "12", "--srt", late, "--out", Path(d) / "c.mp4")
+            self.assertEqual(r.returncode, 1, r.stdout)
+            self.assertIn("past the picture", r.stdout)
+
 if __name__ == "__main__":
     unittest.main()

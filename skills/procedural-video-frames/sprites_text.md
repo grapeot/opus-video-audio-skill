@@ -85,3 +85,14 @@ Two related traps, both of which look like a rendering bug but are not:
   in `detail.md`, where a cross-fade is right: text is read, objects are seen.)
 - A per-character reveal (each glyph fading in shortly after the previous one)
   reads as writing, and gives the music one onset per character to hit.
+- **A Latin display face has no CJK glyphs.** A serif chosen for numbers renders
+  the Chinese unit next to them ("6.53 亿") as empty boxes, silently. Draw mixed
+  runs in two fonts on one baseline: the number in the display face, the unit in a
+  CJK face. Check every string that mixes scripts in a frame, not in the code.
+- **Give a rolling counter fixed-width digits.** With proportional figures, a
+  centred "$941,990,000" shifts sideways on every tick. Place each digit on the
+  advance of "0".
+- **Check the punctuation glyphs of the CJK serif.** Some faces draw the full-width
+  question mark like a small half-width one; swap in the same mark from another
+  CJK face for headlines.
+- Subtitles for a voice-over (chunking, timing, soft tracks) are in `narration.md`.

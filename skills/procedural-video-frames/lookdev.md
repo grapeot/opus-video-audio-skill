@@ -68,12 +68,56 @@ or cheap:
    the effective fix is usually better geometry, a lighting event in a held
    beat, or a truer material.
 
-If an image model is available (for example GPT Image 2.5), it is a natural
-tool for step 2 while the concept is still open -- quick concept frames to
-choose between directions before any renderer exists -- and for static
-background plates that need photographic richness. **Untested:** this use was
-not exercised in the films this skill was built from; check its output against
-the rubric like anything else.
+An image model (for example GPT Image 2.5) can make quick concept frames for
+step 2 while the concept is still open. **Untested** in that role; its use for
+illustration plates inside a film is covered below and was exercised.
+
+## Explainers: give the eye something to look at
+
+A narrated explainer built only from typography and charts reads as dull, however
+clean. The request that came back on one was, in effect, "it is all text; find or
+generate some visuals". Plan figurative plates from the start: the places, objects
+and people-at-work the narration talks about, one per scene where a scene would
+otherwise be type on an empty page.
+
+**Generate one consistent set rather than searching for images.** News and stock
+photos carry licensing problems and never share a look. A set generated in one
+style that matches the film's palette reads as part of the page:
+
+- Lock the style on one plate before generating the rest, then generate the rest
+  in parallel with the same style paragraph: medium and technique (for example
+  steel engraving, cross-hatching in near-black ink), the paper colour, where a
+  spot colour is allowed, and "no text, no border, isolated subject, plain paper
+  background".
+- **Print the plates onto the page instead of pasting them.** Normalise each plate
+  so its paper becomes exactly white (divide by the median border colour), feather
+  the edges to white, and composite with a multiply blend. Only the ink lands; the
+  film's own paper, grain and ruling stay continuous under it.
+- **Resize with a good filter before drawing.** Fine hatching aliases badly when a
+  1024 px plate is drawn at half size with plain bilinear sampling; resize to the
+  exact on-screen size with Lanczos once, at load.
+- **Small plates must be strictly monochrome line work.** At around 100-150 px, the
+  same style prompt produced tinted, glossy, soft-shaded objects that read as app
+  icons in an engraving costume. Ask explicitly for no colour, no gloss, no soft
+  shading, one bold simple subject.
+- **Plates obey the page's fixed geometry.** A plate crossing a fixed margin rule
+  or overlapping the subtitle band reads as a layout error; paired plates (two
+  buildings facing each other) share one ground line; plates on the same page
+  share a period and a technique.
+- The independent critic (above) is the check: it flagged the tinted icons, a plate
+  from a different period and a guilloche competing with the number printed over it.
+
+**Data frames carry their source.** Put one fixed, legible source line on every
+frame that shows a number, and label anything illustrative as illustrative (a
+"schematic" tag on a curve that has no data behind it). Quantities that the film
+compares across scenes must agree numerically: when one scene showed a stack of
+3 costly rounds against 38 cheap ones and the next showed the same bill as an area,
+the first version implied x1.2 in one and x1.6 in the other, and the critic caught
+it. Derive both from the same numbers.
+
+**Colours keep one meaning.** Once red and blue stand for the two sides of a
+conflict, do not reuse either for an unrelated series (a price curve drawn in the
+"insurer" blue read as the insurer's).
 
 ## Compose the symbol; do not display it
 

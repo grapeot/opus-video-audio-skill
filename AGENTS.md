@@ -25,7 +25,9 @@ python scripts/score_cue.py render examples/cue_reveal.json --outdir /tmp/score_
 python scripts/check_frames.py frames frames/ --expect 240 [--ignore-region x0,y0,x1,y1]
 python scripts/check_frames.py sheet frames/ --fps 24 --times 0.5,2,4,9.5 --out sheet.png
 python scripts/check_frames.py assemble frames/ --fps 24 --audio out/cue.wav --out out.mp4 [--scale 360x640]
+python scripts/check_frames.py assemble frames/ --fps 30 --audio mix.wav --srt subs.srt --srt-lang chi --out out.mp4
 python scripts/serve_video.py out.mp4 --port 8765     # LAN preview; stop it after review
+python scripts/narration_check.py script.json takes/ --out takes/chars.json   # needs mlx-whisper
 
 # tests for check_frames.py, serve_video.py and lib/opusvid (must pass)
 python -m unittest discover -s tests -v
@@ -44,15 +46,19 @@ python -m unittest discover -s tests -v
   - `reflections.md` — water/glitter reflections and mapping extents through the right Jacobian
   - `sprites_text.md` — glows and sprites, highlights that read as the wrong object, seams, on-screen text
   - `blender_handoff.md` — handing a material layer to Blender through a coding agent, the contract, elements riding a shared moving surface
+  - `narration.md` — voice-over films: takes before picture, beats keyed to spoken phrases, transcription checks, subtitles, script rewrites
 - `scripts/score_cue.py` — compose → render → normalize → verify CLI
 - `scripts/check_frames.py` — plan / frames / sheet / stream verification CLI, plus `assemble` (mux + stream check)
 - `scripts/serve_video.py` — serve only the listed video files on the LAN, with HTTP Range, for phone preview
+- `scripts/narration_check.py` — transcribe voice takes, diff them against the script, write per-character timestamps
 - `lib/opusvid/` — reusable film plumbing, imported by adding `lib/` to `sys.path` (not installed)
   - `runner.py` — frame-render CLI + worker pool around `render_frame(i)`; fresh output dirs; run start for `--since`
   - `timeline.py` — easing, `Events`, PCHIP `CameraPath` (log-space width), `solve_time`, `world_to_pixel`, `export_camera_json`
   - `typeset.py` — glyph masks, letter-spaced lines, vertical columns, float blending, timed reveals, soft bed
+  - `narration.py` — `speech_extent`, `Narration` (placement, `at`, `char_times`, `subtitles`), `chunk`, `srt`
 - `tests/test_scripts.py` — unittest coverage for `check_frames.py sheet`, `--ignore-region`, and `serve_video.py`
-- `tests/test_opusvid.py` — unittest coverage for `lib/opusvid` and `check_frames.py assemble`
+- `tests/test_opusvid.py` — unittest coverage for `lib/opusvid` and `check_frames.py assemble` (including `--srt`)
+- `tests/test_narration.py` — `lib/opusvid/narration`, `narration_check.py`'s pure helpers, and `score_cue.py measure` on correlated stereo
 - `examples/cue_reveal.json` — annotated 10s cue spec with a reveal beat at 6.0s
 - `examples/minimal_film/` — 3 s, 360x640 end-to-end example and smoke test (shared timeline → frames → cue → mp4)
 - `docs/working.md` — changelog and lessons learned
@@ -63,7 +69,7 @@ python -m unittest discover -s tests -v
 - **Every claim in the skill is measured or cited.** No assertion about audio quality, no remembered gain or loudness numbers. If a figure changes, re-measure and update it with the new measurement.
 - **`score_cue.py` must exit non-zero on clipping, a duration mismatch, or a missed storyboard beat.** The script's value is that it fails loudly; silent success on broken output defeats the purpose.
 - Never claim a cue sounds good. The script's report ends by saying so explicitly — keep that line.
-- Dependencies are split and stay split: `score_cue.py` is standard-library plus `mido` and `numpy` only; `check_frames.py` adds Pillow; `serve_video.py` is standard-library only; `lib/opusvid` may use numpy, scipy and Pillow. Scripts under `scripts/` never import `lib/`. `fluidsynth` and `ffmpeg` are external binaries invoked as subprocesses.
+- Dependencies are split and stay split: `score_cue.py` is standard-library plus `mido` and `numpy` only; `check_frames.py` adds Pillow; `serve_video.py` is standard-library only; `narration_check.py` is standard-library plus `mlx-whisper`, imported only when transcribing; `lib/opusvid` may use numpy, scipy and Pillow. Scripts under `scripts/` never import `lib/`. `fluidsynth` and `ffmpeg` are external binaries invoked as subprocesses.
 - `lib/opusvid` stays a thin toolkit: only code that real films rewrote nearly identically belongs there. Domain content (a particular subject, its shading, its layout) stays in the film's own script. Font paths are always parameters; never hard-require a font file.
 - Run the smoke test above after touching `score_cue.py`, the unit tests after touching `check_frames.py`, `serve_video.py` or `lib/opusvid`, and the `examples/minimal_film` commands after touching `lib/opusvid` or `check_frames.py assemble`.
 - Skill text states reusable rules, not a diary of the films they came from: a general rule, a real-world sanity check where possible, and at most a half-sentence of example. Anything not exercised on a real job is marked **untested**.

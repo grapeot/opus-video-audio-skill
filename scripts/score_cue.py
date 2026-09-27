@@ -266,30 +266,34 @@ def post_process(raw: Path, out: Path, r: dict, duration: float) -> None:
 # ---------------------------------------------------------------------- measure
 
 
-def load_samples(path: Path, rate: int = 48000):
-    """Decode any audio file to mono float32 via an ffmpeg pipe."""
+def load_channels(path: Path, rate: int = 48000):
+    """Decode any audio file to float32 at ``rate``, keeping its channels: shape (n, channels).
+
+    Do not let ffmpeg downmix with ``-ac 1`` here: for correlated stereo (a mono mix
+    written to both channels) it sums the channels at about +3 dB, so a file peaking at
+    0.84 measures 1.19 and is falsely reported as clipping."""
     import numpy as np
 
     require("ffmpeg")
+    require("ffprobe")
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries",
+         "stream=channels", "-of", "csv=p=0", str(path)],
+        check=True, capture_output=True, text=True)
+    ch = max(1, int((probe.stdout.strip().splitlines() or ["1"])[0] or 1))
     proc = subprocess.run(
-        [
-            "ffmpeg",
-            "-v",
-            "quiet",
-            "-i",
-            str(path),
-            "-f",
-            "f32le",
-            "-ac",
-            "1",
-            "-ar",
-            str(rate),
-            "-",
-        ],
+        ["ffmpeg", "-v", "quiet", "-i", str(path), "-f", "f32le", "-ar", str(rate), "-"],
         check=True,
         stdout=subprocess.PIPE,
     )
-    return np.frombuffer(proc.stdout, dtype="<f4"), rate
+    x = np.frombuffer(proc.stdout, dtype="<f4")
+    return x[: len(x) // ch * ch].reshape(-1, ch), rate
+
+
+def load_samples(path: Path, rate: int = 48000):
+    """Mono float32 (the mean of the channels) for envelope and centroid work."""
+    x, rate = load_channels(path, rate)
+    return x.mean(axis=1), rate
 
 
 def envelope(x, rate: int, window: float = 0.5):
@@ -335,8 +339,9 @@ def spectral_centroid(x, rate: int) -> float:
 def measure(path: Path, storyboard: list | None = None) -> dict:
     import numpy as np
 
-    x, rate = load_samples(path)
-    peak = float(np.max(np.abs(x))) if len(x) else 0.0
+    xc, rate = load_channels(path)
+    peak = float(np.max(np.abs(xc))) if xc.size else 0.0      # sample peak over every channel
+    x = xc.mean(axis=1)
     env = envelope(x, rate)
     report = {
         "file": str(path),
