@@ -16,6 +16,8 @@ out/
 *.mp3
 *.mid
 *_report.json
+*.mp4
+*.mov
 
 # Soundfonts (206MB; fetch from the upstream mirror)
 *.sf2

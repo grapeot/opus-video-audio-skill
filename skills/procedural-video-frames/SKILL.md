@@ -3,32 +3,33 @@ name: procedural-video-frames
 description: >
   Render short videos as numbered PNG frames from a Python script, then mux them
   with ffmpeg -- the frame-sequence pipeline, not a DAW and not a text-to-video
-  model. Covers settling the concept before building, camera and framing math
-  (why a subject's real angular size dictates the focal length, and why some
-  shots are geometrically impossible), additive linear compositing with tone
-  mapping, exposure that has to change as the field of view changes, glow and
-  sprite artifacts, reflections, on-screen text, one timeline shared with the
-  music, look development with an independent critique loop, rendering exquisite
-  detail across a large continuous zoom, handing material-heavy layers to Blender
-  through a coding agent, and the verification discipline that keeps you from
-  reviewing stale frames or shipping a shot you never actually looked at. Use this skill
-  whenever a task involves rendering or animating a short video, reel, short,
-  greeting, explainer or title sequence programmatically; whenever frames are
-  produced by code (numpy, PIL, matplotlib, Blender scripting) and assembled
-  into an mp4; whenever a camera has to push in, pan or reframe over time;
-  whenever compositing a subject over a background with glow, halo, haze or a
-  reflection; or whenever a render looks washed out, too dark, flat, or has
-  visible seams and edges. Reach for it even when the animation sounds trivial
-  ("just zoom into this image over 10 seconds"), because the failure modes here
-  -- inverted exposure laws, off-frame geometry, stale-frame review -- are
-  silent and cost whole render passes.
+  model. This entry file holds the rules for every render (framing math in
+  angles and the shots that are geometrically impossible, additive linear
+  compositing with one tone map, exposure that must fall as the field of view
+  widens, verification against stale frames and unlooked-at shots, contact
+  sheets, previewing on a phone, ffmpeg assembly) and routes to sub-documents
+  for look development with an independent critic, fine detail across a large
+  zoom (SDFs, level of detail, anti-aliasing, growth), reflections on water,
+  glows/highlights/seams/on-screen text, and handing a material layer such as
+  cloth to Blender through a coding agent. Use this skill whenever a task
+  involves rendering or animating a short video, reel, short, greeting,
+  explainer or title sequence programmatically; whenever frames are produced by
+  code (numpy, PIL, matplotlib, Blender scripting) and assembled into an mp4;
+  whenever a camera has to push in, pan or reframe over time; whenever
+  compositing a subject over a background with glow, halo, haze or a
+  reflection; or whenever a render looks washed out, too dark, flat, cheap,
+  aliased, or has visible seams and edges. Reach for it even when the animation
+  sounds trivial ("just zoom into this image over 10 seconds"), because the
+  failure modes here -- inverted exposure laws, off-frame geometry, stale-frame
+  review -- are silent and cost whole render passes.
 ---
 
 # Procedural Video: Frames from Code
 
 > Validated on macOS, September 2026, across several short vertical films
 > (10-15s, 24-30fps) rendered end to end with this pipeline, each taken through
-> multiple full render passes and human review.
+> multiple full render passes and human review. Anything marked **untested**
+> was not exercised on those films.
 > For the audio half -- composing a cue, hitting timecodes, loudness, and the
 > fact that you cannot hear -- see the sibling skill `video-scoring-audio`.
 
@@ -41,96 +42,29 @@ video models do not honor that kind of instruction -- the same failure the audio
 skill documents for generative music. If the brief has no hard timing or
 geometry, a video model is cheaper and you should say so.
 
-The pipeline is small: a Python script writes `f0000.png … f0239.png`, and
+The pipeline is small: a Python script writes `f0000.png ... f0239.png`, and
 ffmpeg turns them into an mp4. Everything hard lives in the script.
 
-## Settle the concept before writing the renderer
+**Reuse before you rebuild.** If the project already has a renderer for this
+domain, read its docs and CLI before writing your own; the mode you are about
+to reimplement may already be a flag. Check that a cached dataset actually
+covers what the shot needs: a cache built for one framing can silently return
+an empty or clipped result for a different one, which reads as a rendering bug
+and is not.
 
-The most expensive miss is not a rendering bug but a clean render of the wrong
-film. A technically correct piece built around one subject on an empty
-background tends to come back as "fine, but monotonous", and a piece that only
-implies its occasion tends to come back as "I can't tell what this is for".
-Neither is fixable with parameters.
+## Where to read next
 
-Before code, write two or three concepts in a few sentences each -- what is on
-screen, what moves, what the viewer should feel, and the main risk of each --
-and let the human choose. It is cheap, and the choice usually changes the scene
-graph, not just the colours.
+This file holds the rules that apply to every render. Read a sub-document when
+its trigger applies; they live next to this file.
 
-When the brief is for something that looks polished or "expensive", that rarely
-means more symbols. What reliably reads as high production value in procedural
-work:
-
-- **Depth.** At least three layers -- far (haze-dimmed), middle, near -- so a
-  slow camera move produces parallax. One subject on an empty field reads as a
-  tech demo.
-- **Light interacting with matter.** Reflections, glow through haze, rim light
-  on cloud or mist, emitters lighting their surroundings. These are computations
-  you can get right, and they carry the look.
-- **Restraint in the finish.** Considered typography, generous negative space,
-  a single closing element.
-- **Say the message.** If the film is for an occasion or a greeting, put the
-  words on screen; allusion alone is not enough for most viewers.
-
-Avoid procedurally drawn figurative characters (people, animals, mascots). They
-are the fastest route to looking cheap, and a silhouette traced onto data
-rarely holds up. Suggest them through context instead.
-
-## Look development: references, a rubric, stills, and an independent critic
-
-"Premium" is not something you can verify by checking your own code. What
-worked, after several technically clean versions were rejected as kitsch or
-cheap:
-
-1. **Research references before designing.** Have a sub-agent collect 8–12
-   high-end references for the genre (broadcast, museum, brand work, and a few
-   non-local exemplars of the technique you plan) and distil them into a rubric
-   of 6–10 concrete criteria plus the genre's common kitsch traps. In one
-   genre, the first page of search results was mostly templates; the average of
-   those templates is exactly what a first attempt converges to, and exactly
-   what reads as cheap.
-2. **Render look-development stills at final quality before animating.** Three
-   frames (opening, turning point, final) cost seconds to revise; an animation
-   pass costs minutes. Show them to the human and settle the look first.
-3. **Run an independent critic before the human sees anything.** A sub-agent
-   with the rubric, the references and the keyframes (named by timestamp) scores
-   each criterion and ranks the top problems with a concrete fix each. A second
-   pass should check the first review's items as fixed / partly / not fixed.
-   The critic reliably caught things the author had rationalised: a narrow
-   reflection, a straight wire that read as an aliasing artifact, an opening
-   frame that read as a different holiday's symbol.
-4. **Spend the revision on material and light, not on new elements.** Each
-   time something felt "not expensive enough", the tempting fix was to add a
-   symbol; each time, the effective fix was better geometry, a lighting event
-   in the held beat, or a truer material.
-
-Two findings about composition that generalise:
-
-- **Compose the symbol; do not display it.** A national symbol drawn by the
-  action of the film (threads that trace the flag's own construction lines, light
-  that reveals a surface) reads as crafted. The same symbol shown on a screen or
-  billboard inside the scene reads as a template.
-- **Avoid dense regular grids of small repeated units** as the reveal. Ten
-  thousand identical tiles resolving into a picture triggered a strong
-  crowding/trypophobic reaction; a single element that grows, plus light that
-  spreads, carried the same idea without it.
-
-If an image model is available (for example GPT Image 2.5), it is a natural
-tool for step 2 when the concept is still open — quick concept frames to choose
-between directions before any renderer exists — and for static background
-plates that need photographic richness. That use was not exercised in the films
-this skill was built from; treat it as untested and check its output against the
-rubric like anything else.
-
-## Test every physical detail for perceptibility
-
-Accurate detail earns its place only if a viewer perceives it as intended. Time
-compression is the usual trap: a slow real motion squeezed into seconds changes
-meaning. A real, few-degree oscillation that takes weeks, played back in a few
-seconds, reads as the subject **wobbling**, and a viewer will ask whether it is
-a bug. Before adding a physically true effect, ask what it will look like at the
-film's time scale and on a phone screen, and cut it if the honest answer is
-"like an error" or "like nothing".
+| Read | When |
+|------|------|
+| `lookdev.md` | Before writing any renderer: settling the concept, references and a rubric, look-dev stills, the independent critic loop, composing symbols rather than displaying them, density judged at on-screen size, perceptibility of physical effects. Also when a clean render is called cheap, kitsch, monotonous or unclear. |
+| `critic_prompt.md` | Every revision round, before the human sees frames: the prompt for the independent art-director sub-agent. |
+| `detail.md` | Crafted detail (wire, filigree, ornament) at very different screen sizes; zooms across orders of magnitude; SDF per-pixel rendering; level of detail; anti-aliasing a height field; motif layout; growth and cross-fades between representations. |
+| `reflections.md` | Water or glossy reflections of a light source; any size carried from one space to another (angular extent, pixel footprint, blur radius). |
+| `sprites_text.md` | Glows, particles, bloom, highlights that read as the wrong thing, rectangles/rays/seams, split-screen panels, and any on-screen text. |
+| `blender_handoff.md` | Cloth or another material a height field cannot sell; elements that must ride a moving surface; showing a surface's height under an orthographic camera; dispatching a coding agent to drive Blender. |
 
 ## Reason about framing in angles before you write the render loop
 
@@ -155,6 +89,7 @@ telephoto photographs of a high subject have no landscape in them. If a brief
 asks for both a filled subject and the foreground, the honest answers are to
 split the shot into two focal segments, keep the subject low (near the horizon
 a telephoto can hold both), or change the brief -- not to fake it.
+`check_frames.py plan` prints this table.
 
 When a shot does need two focal lengths, interpolate in **log focal space**, or
 the push visibly races at the tight end:
@@ -166,6 +101,12 @@ fov = exp(log(fov_wide) + (log(fov_tele) - log(fov_wide)) * ease(k))
 Before rendering, print a small table of time, fov, subject pixel size, and the
 frame row of anything that must stay visible. Off-frame values (negative rows,
 rows past the frame height) are the geometry telling you the shot does not work.
+
+**The projection decides which motions are visible.** An orthographic camera
+looking straight down cannot show height: a surface waving up and down moves
+nothing on screen. If the story depends on a motion, confirm the projection
+turns it into screen displacement before rendering (`blender_handoff.md` has
+the parallel-oblique fix).
 
 ## Composite in linear light, tone map once at the end
 
@@ -183,7 +124,8 @@ img = np.clip(np.power(canvas / (1 + canvas), 1/1.85), 0, 1)   # Reinhard + gamm
 Additive accumulation is what makes overlapping glows behave; tone mapping once
 is what keeps bright areas from clipping to flat white. If you tone map inside a
 helper and then add more light, you get the washed-out look that no amount of
-parameter twiddling fixes.
+parameter twiddling fixes. Layers rendered elsewhere (a Blender plate, a
+photograph) are linearised (inverse sRGB) before they join the canvas.
 
 **Check your background floor in isolation.** A "faint" ambient level is easy to
 set an order of magnitude too high: a floor of `0.012` tone-mapped to luminance
@@ -218,212 +160,6 @@ design, and the subject should show real spread (e.g. p10≈22, p90≈125). If t
 corner is bright and you did not intend it, something is leaking light into the
 whole frame.
 
-## Glows and sprites: force every falloff to zero
-
-The classic artifact is a **visible rectangle** around a glowing element: a
-radial falloff computed over a local box never reaches zero at the box edge, so
-the box shows. Size the box from the falloff (about 4.5 sigma for a Gaussian),
-and multiply by a term that hits exactly zero inside it:
-
-```python
-glow *= np.clip(1.0 - r / (4.0 * sigma), 0, 1) ** 2   # hard zero before the box edge
-```
-
-This applies to **every** local sprite -- particles, small lights, secondary
-elements -- not only the hero subject. Fixing it on the main element does not
-fix it on the twenty small ones drawn by a different function. Verify by
-sampling a row through a sprite: values should fall off smoothly with no step.
-
-Two related shading traps:
-
-- **Directional weights must not reach zero.** Making a glow lopsided toward a
-  light with `((1 + dot) / 2) ** k` drives it to exactly zero on the far side,
-  and with a small `k` that zero shows as a thin **dark ray**. Use
-  `exp(-k * (1 - dot))`, which is smooth everywhere.
-- **Occlude only what is behind the object.** When a foreground body hides
-  background elements (stars behind a planet, lights behind a building), apply
-  the mask to those background layers only. Masking the whole canvas also
-  removes haze and glow that sit *in front* of the body, and its dark side comes
-  out darker than the sky around it.
-
-## Map extents between spaces through the right Jacobian
-
-Whenever a quantity's size is carried into another space -- a light source's
-angular extent into surface-slope space for reflections, a pixel's footprint
-into texture or world space, a blur radius into a different projection --
-derive the mapping instead of assuming a uniform scale. The two axes often
-scale very differently, and the error is silent: the output looks plausible,
-and it is easy to rationalise as "that's just the physics".
-
-Pair every such mapping with a sanity check from the real world. For
-reflections: **on a calm surface, the reflection of a source is at least as wide
-as the source.** A narrower reflection is a modelling error, not an effect.
-
-### Reflections on water
-
-A recipe that holds up for a light source over open water (Cox-Munk glitter):
-
-- For each water pixel, take the half vector between the direction to the
-  camera and the direction to the source, and turn it into the facet slope that
-  would mirror the source into that pixel.
-- Weight by the probability of that slope under the local slope distribution
-  (resolved waves as the mean, unresolved roughness as the variance):
-
-  ```python
-  L = E_source * fresnel * p(slope_required) / (4 * cos_view * cos_tilt ** 4)
-  ```
-
-- Include the source's own extent in the slope variance, **per axis**. An
-  azimuth offset `d` needs a slope of `d / (sin(view_depression) + sin(source_elevation))`,
-  while an elevation offset needs about `d / 2`. Near grazing the first is an
-  order of magnitude larger; using `d / 2` for both collapses the reflection into
-  a thin line.
-- Filter each wave component by the pixel's footprint on the water
-  (`exp(-0.5 * ((kx*fx)**2 + (kz*fz)**2))`) and add the filtered-out slope
-  variance to the roughness. Without it distant water aliases into flicker; with
-  it far water becomes a smooth band and near water breaks into streaks.
-- For sparkle, hand a fraction of the energy to short-lived random points whose
-  mean equals the smooth result. The reflection glitters without changing its
-  overall brightness.
-- Mirror the rest of the scene (sky, distant land, other lights) by sampling a
-  reflection buffer rendered from a virtual camera below the surface, at the
-  elevation the resolved wave slope sends each ray to. Reflections then wobble
-  with the waves for free.
-- Blend distance haze into the water so the horizon dissolves instead of
-  ending in a hard line.
-
-## Exquisite detail across a large continuous zoom
-
-A continuous move from a single wire to a whole emblem (two orders of magnitude)
-is a strong "small to grand" reveal, and it can be rendered without meshes:
-
-- **Describe the subject with signed distance fields and evaluate per pixel.**
-  Map each pixel to world coordinates for the current view, compute distances to
-  the subject's curves, turn them into a height field, and take normals from its
-  gradient. The same code then renders a wire filling the frame and the whole
-  object at the far end, with exact detail at every zoom.
-- **Model the real geometry instead of faking it with a texture.** A twisted
-  two-strand wire modelled as two round strands on a helix (pitch about two
-  diameters) read as crafted metal; the same wire with a sinusoidal bump pattern
-  read as a noisy circuit trace. Lit by a single grazing key, each twist gets its
-  own highlight.
-- **Add a level of detail.** When a feature's projected size drops below about
-  5 px, crossfade it to a simpler form (a smooth tube; a whole shaded shape).
-  Otherwise fine structure aliases into dashes and stair-steps exactly where the
-  final frame rests.
-- **Lay motifs out so no boundary slices them.** Deciding per pixel whether a
-  spiral may appear leaves half-arcs wherever a ridge or outline passes, which
-  reads as a boolean error. Decide per motif instead: pack circles into each
-  region (e.g. the incircle of a triangular facet plus chains toward its
-  corners, shrunk away from any border band) and put one whole motif in each.
-  Taper free ends rather than cutting them.
-- **Measure glows and growth fronts in arc length, not angle.** A glint defined
-  as a window in a spiral's angle is a point near the centre and a long band on
-  the outer turns. Scale by radius so it stays a pinpoint.
-- **Animate "being made" along each element's own path.** A single circular
-  reveal front cuts every wire on one circle and reads as a mask. Letting each
-  spiral wind out from its own centre when the front reaches it reads as the
-  object being formed.
-- **Drive the camera through keyframes with a monotone cubic (PCHIP) in log
-  width.** Smoothstep between keys stops at every key; linear width races at
-  the tight end.
-
-## When code alone is not enough: hand the material layer to Blender
-
-Two-and-a-half-D height fields do metal, lacquer and light very well from a
-fixed camera. They do not do believable cloth, true perspective, or physically
-correct depth of field; one film's silk stayed "a gradient with a light shaft"
-through several revisions. If the user has Blender and a coding agent that can
-drive it (in these films, Codex running the model the user specified), split the
-work:
-
-- **The procedural layer owns timing and exact geometry** (here: the growing
-  filigree, the threads, the stars, their contact shadows, the text). The
-  **Blender layer owns the material-heavy plate** (here: the silk).
-- **Write a precise contract for the agent**, and verify it rather than trusting
-  it:
-  - one world coordinate system, with the mapping to Blender axes spelled out;
-  - a per-frame camera file exported from the same timeline module the renderer
-    uses (centre, width, rotation, and any animated scalars);
-  - an orthographic camera with the sensor fit and scale stated, plus a check
-    that projects known points through Blender's actual camera matrix and
-    compares them to the expected pixels (sub-pixel agreement is achievable);
-  - any lighting that must match between layers given as a formula (e.g. the
-    reveal's falloff), not a description;
-  - output format: 16-bit PNG with the Standard view transform, highlights kept
-    below ~0.9 so the procedural layer can be the brightest thing, and a
-    linearisation step (inverse sRGB) before compositing in linear light;
-  - test frames first, which the agent must open and iterate on, then the full
-    sequence, with per-frame timing reported.
-- **If procedural elements must ride a moving plate surface, share the motion
-  as code.** Put the surface's motion (height and any in-plane sway) in one
-  small module that both the Blender script and the procedural renderer import,
-  and invert the sway per pixel (a few fixed-point iterations) to find which
-  material point each pixel shows. Elements laid on top of a separately
-  rendered, moving cloth otherwise look pasted on. The strongest "it is on the
-  cloth" cue was lighting, not motion: tilt the elements' normals by the
-  surface's slope and dim them in the surface's valleys. A coupling factor that
-  ramps from 0 to 1 lets an element start rigid and settle onto the surface.
-- **Composite in your pipeline, not theirs.** Load the plate, linearise, apply
-  the procedural layer's contact shadows to it, put the procedural elements on
-  top, then tone map once.
-
-Operational notes from running this:
-
-- Blender segfaulted on startup inside the coding agent's default write
-  sandbox; it rendered normally unsandboxed. Run the agent without the sandbox,
-  scope it in the prompt to one directory, and tell it not to touch other
-  processes.
-- The agent inherits workspace rules. One run refused to write its own
-  technical notes because a workspace rule routed prose to another tool; say
-  explicitly which files it should write itself.
-- Pass the model explicitly if the user names one. Metal's first kernel
-  compile took about two minutes; afterwards a 1080×1920 plate frame rendered in
-  about 2.5 s. Render the parts of the film that do not need the plate while the
-  agent works.
-
-## Seams: draw shared geometry once, across the whole frame
-
-When a frame is assembled from panels (split screen, per-source layers), drawing
-the same background element separately per panel produces a seam — the two
-copies disagree at the boundary, and padding that overshoots the midline makes
-it worse. Draw anything that spans the frame **once**, over the full width, and
-place per-panel items on top of it afterwards.
-
-Verify numerically: the mean of the seam columns should equal the mean of
-columns well away from it. If it does not, the seam is real and a viewer will
-see it.
-
-Two related traps, both of which look like a rendering bug but are not:
-
-- `PIL.ImageDraw.line` on an **RGB** image silently ignores an alpha value in
-  `fill`. A line you believe is fading stays fully opaque for the whole shot.
-  Fade by blending the colour toward the background instead.
-- An element composited inside a half-width panel gets **cropped at the panel
-  edge**. If two panels converge onto one shared subject, composite that subject
-  on the whole frame once they have merged, not inside either panel.
-
-## Text on screen
-
-- Render glyphs to a coverage mask and blend them into the float image
-  yourself, rather than relying on PIL alpha on an RGB image.
-- Vertical CJK text: place one glyph at a time down a column.
-- When a label changes on a beat (a counter, a date, a score), **hard-cut on the
-  beat** instead of crossfading. Two different glyphs mid-crossfade can overlay
-  into a third, legible, wrong character -- especially in CJK, where similar
-  strokes stack convincingly. A hard cut also lands exactly on the music.
-- A per-character reveal (each glyph fading in shortly after the previous one)
-  reads as writing, and gives the music one onset per character to hit.
-
-## Share one timeline between picture and music
-
-Put every beat time in one small module that both the renderer and the cue
-generator import. Compute derived event times (when a moving subject first
-crosses an edge, when a counter ticks) by evaluating or solving the same motion
-function the renderer uses, never by reading them off a preview. Then a change
-to the motion moves the music with it, and each visual event lands on the first
-frame after its note's onset without hand-tuning.
-
 ## Verification: the part that actually costs render passes
 
 An agent reviewing its own render is prone to two specific mistakes, and each
@@ -431,7 +167,7 @@ costs a full pass.
 
 **Confirm the frames you are looking at are from this run.** Waiting on a *file
 count* is a race: the previous pass's frames are still on disk, so the wait
-returns instantly and you review stale images — concluding your fix "didn't
+returns instantly and you review stale images -- concluding your fix "didn't
 work" when it was never tested. Wait for the **process** to exit, or render into
 a fresh per-run directory:
 
@@ -451,18 +187,46 @@ can call it.
 **Look at the images.** Many defects are invisible in every number: two
 subjects reading as a pair instead of one, a subject bisected by a divider line,
 an outline that never faded, a ray or box artifact, a reflection narrower than
-its source. Numbers catch exposure and geometry; only looking catches
-composition. Check at least the opening, each transition beat, and the final
-frame, and crop to full resolution around anything small.
+its source, a highlight that reads as a flame. Numbers catch exposure and
+geometry; only looking catches composition. Check at least the opening, each
+transition beat, and the final frame, and crop to full resolution around
+anything small. A labelled contact sheet at the beat timestamps makes this one
+image:
+
+```bash
+python scripts/check_frames.py sheet frames/ --fps 30 \
+  --times 0.5,2,4,6,8,10,12,14.5 --out sheet.png
+```
+
+**Get an independent critic every round.** Every revision round goes to a
+critic sub-agent (`critic_prompt.md`) before the human sees it; see `lookdev.md`.
+
+**Watch it where it will be watched.** Detail density, text size and motion
+speed are judged at delivery size. For a phone audience, play the actual file on
+a phone: `scripts/serve_video.py out.mp4` serves only the listed files on the
+local network with the HTTP Range support iOS Safari needs, and prints the URL.
+It binds to all interfaces, so anyone on the same network can fetch the file
+while it runs; stop it (Ctrl-C) as soon as the review is done.
 
 **Treat the checker's thresholds as defaults, not verdicts.** Generic checks
 (corner brightness, tonal spread, a midline seam, a sharp row or column step)
-will fire on intentional choices -- a lit sky, a night scene that is mostly dark,
-a centred subject, a long straight bright wire. When
-that happens, confirm by looking, then raise the threshold deliberately and say
-so, rather than tuning the image to satisfy the check.
+fire on intentional choices -- a lit sky, a night scene that is mostly dark, a
+centred subject, a long straight bright edge or wire in the design. When that
+happens, confirm by looking, then relax the check deliberately and say so
+(`--max-corner`, or `--ignore-region x0,y0,x1,y1` around the straight element),
+rather than tuning the image to satisfy the check. Keep each ignored box tight
+around the element: the box's own border does not create a step, but nothing
+inside it is checked any more.
 
-## Assembly and stream verification
+## Assembly: one timeline, mux, verify the stream
+
+**Share one timeline between picture and music.** Put every beat time in one
+small module that both the renderer and the cue generator import. Compute
+derived event times (when a moving subject first crosses an edge, when a counter
+ticks) by evaluating or solving the same motion function the renderer uses,
+never by reading them off a preview. Then a change to the motion moves the
+music with it, and each visual event lands on the first frame after its note's
+onset without hand-tuning.
 
 Mux with an explicit frame rate, and verify rather than assuming:
 
@@ -477,30 +241,27 @@ ffmpeg -v error -i out.mp4 -f null -          # zero output = clean decode
 ```
 
 `-pix_fmt yuv420p` is what makes the file play outside your own machine. Note
-that **HEVC (libx265) does not decode in some Chrome builds** — Safari and most
+that **HEVC (libx265) does not decode in some Chrome builds** -- Safari and most
 players are fine, but if the audience is unknown, ship H.264 or offer it
 alongside. A clean decode proves data integrity, not that the shot is any good.
-
-## Reuse before you rebuild
-
-If the project already has a renderer for this domain, read its docs and CLI
-before writing your own; the mode you are about to reimplement may already be a
-flag. Equally, check that a cached dataset actually covers what the shot needs:
-a cache built for one framing can silently return an empty or clipped result for
-a different one, which reads as a rendering bug and is not.
+`check_frames.py stream` runs both checks.
 
 ## Checklist before declaring a render done
 
 - Concept chosen by the human before building; the message is said on screen
 - References and a rubric gathered; look-dev stills approved before animating
-- An independent critic reviewed the keyframes against the rubric
+- An independent critic reviewed the keyframes against the rubric on *this* round
 - Angular-size table printed, and nothing that must be visible is off-frame
+- Every motion the story depends on is visible under the chosen projection
 - Every physically true effect checked at the film's time scale
 - Frame corner dark unless lit by design; subject shows real tonal spread
 - No rectangular glow edges on any sprite; no directional weight reaches zero
+- Every bright region reads as light on its material, not as another object
 - No motif sliced by a boundary; fine detail has a level of detail below ~5 px
+- Detail density judged at delivery size; small objects have clean forms
 - Reflections at least as wide as their sources; no seam at panel boundaries
 - Frames confirmed to be from this run (process exited, or fresh directory)
 - Opening, each transition beat, and the final frame looked at as images
+  (a contact sheet at the beat times), and the file watched on the target device
 - `ffprobe` dimensions/fps/duration match intent; `ffmpeg -f null -` is silent
 - Delivery codec matches the audience

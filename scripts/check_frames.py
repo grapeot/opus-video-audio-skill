@@ -10,12 +10,15 @@ so the human's attention (and yours) goes to the part that is not.
 Subcommands
 -----------
   frames   exposure / freshness / halo-box / seam checks on a PNG sequence
+  sheet    contact sheet of the frames at given timestamps, each labelled
   plan     angular-size table: is the subject the size you think, and on-frame?
   stream   ffprobe geometry + full decode of a finished mp4
 
 Examples
 --------
   python check_frames.py frames frames_v4 --expect 240 --since 1727300000
+  python check_frames.py frames frames_v4 --ignore-region 180,760,830,790
+  python check_frames.py sheet frames_v4 --fps 24 --times 0.5,2,4,6,9.5 --out sheet.png
   python check_frames.py plan --angular-size 0.52 --height 1920 --fov 100,20,3.1
   python check_frames.py stream out.mp4 --expect-duration 10 --expect-fps 24
 """
@@ -35,6 +38,31 @@ from PIL import Image
 
 def _luma(path):
     return np.asarray(Image.open(path).convert("RGB"), float).mean(-1)
+
+
+def _profile_steps(L, keep, axis):
+    """|change in mean luminance| between adjacent columns (axis=0) or rows (axis=1),
+    measured only over pixel pairs where both pixels are outside the ignored boxes.
+    With nothing ignored this is exactly |diff| of the column/row means."""
+    if axis == 1:                           # rows: transpose so we always step along axis 1
+        L, keep = L.T, keep.T
+    d = L[:, 1:] - L[:, :-1]
+    k = keep[:, 1:] & keep[:, :-1]
+    n = k.sum(0)
+    tot = np.where(k, d, 0.0).sum(0)
+    out = np.zeros(n.shape)
+    np.divide(tot, n, out=out, where=n > 0)
+    return np.abs(out)
+
+
+def _region(text):
+    try:
+        x0, y0, x1, y1 = (int(round(float(v))) for v in text.split(","))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"expected x0,y0,x1,y1, got {text!r}")
+    if x1 <= x0 or y1 <= y0:
+        raise argparse.ArgumentTypeError(f"empty region {text!r}: need x0<x1 and y0<y1")
+    return x0, y0, x1, y1
 
 
 def cmd_frames(a):
@@ -94,15 +122,26 @@ def cmd_frames(a):
                         f"mostly dark by design also trips this; judge it by looking")
 
     # --- halo boxes: look for straight vertical/horizontal steps ----------
+    # Pixel pairs touching an --ignore-region box are left out of the step
+    # measurement, so the box's own edges do not create new steps.
     L = _luma(files[idx[len(idx) // 2]])
-    col = L.mean(0)
-    row = L.mean(1)
-    for name, prof in (("column", col), ("row", row)):
-        d1 = np.abs(np.diff(prof))
-        if d1.size and d1.max() > a.step_thresh * max(prof.mean(), 1e-6):
+    H, W = L.shape
+    keep = np.ones_like(L, dtype=bool)
+    for (x0, y0, x1, y1) in a.ignore_region or []:
+        keep[max(y0, 0):min(y1, H), max(x0, 0):min(x1, W)] = False
+    if a.ignore_region:
+        print(f"\n  step check ignores {len(a.ignore_region)} region(s), "
+              f"{100 * (1 - keep.mean()):.1f}% of the frame")
+    ref = max(float(L[keep].mean()) if keep.any() else 0.0, 1e-6)
+    for name, axis in (("column", 0), ("row", 1)):
+        d1 = _profile_steps(L, keep, axis)
+        if d1.size and d1.max() > a.step_thresh * ref:
             at = int(np.argmax(d1))
             problems.append(f"sharp {name} step at {at} "
-                            f"(jump {d1.max():.1f}): possible halo box edge or seam")
+                            f"(jump {d1.max():.1f}): possible halo box edge or seam. "
+                            f"A straight bright edge or wire in the design is a common "
+                            f"false positive; if that is what is there, exclude it with "
+                            f"--ignore-region x0,y0,x1,y1 and say so")
 
     # --- seam: only meaningful for split-screen frames ---------------------
     # A centred subject (a moon, its reflection path) trips this on an
@@ -125,6 +164,75 @@ def cmd_frames(a):
     print("\n  Numbers cannot see composition. Open the opening frame, each")
     print("  transition beat, and the final frame as images before shipping.")
     return 1 if problems else 0
+
+
+# ----------------------------------------------------------------- sheet ----
+
+def _font(size):
+    from PIL import ImageFont
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:                       # Pillow < 10.1: fixed-size bitmap font
+        return ImageFont.load_default()
+
+
+def cmd_sheet(a):
+    from PIL import ImageDraw
+    d = Path(a.directory)
+    files = sorted(d.glob("*.png"))
+    if not files:
+        print(f"FAIL  no PNG frames in {d}")
+        return 1
+    try:
+        times = [float(t) for t in a.times.split(",") if t.strip()]
+    except ValueError:
+        print(f"FAIL  --times must be comma-separated seconds, got {a.times!r}")
+        return 1
+    if not times:
+        print("FAIL  --times is empty")
+        return 1
+
+    picks, bad = [], []
+    for t in times:
+        i = int(round(t * a.fps))
+        if i < 0 or i >= len(files):
+            bad.append(f"t={t:g}s -> frame {i} (sequence has {len(files)} frames, "
+                       f"{len(files) / a.fps:.2f}s at {a.fps:g}fps)")
+        else:
+            picks.append((t, i, files[i]))
+    for b in bad:
+        print(f"  FAIL  out of range: {b}")
+    if bad:
+        return 1
+
+    with Image.open(picks[0][2]) as first:
+        fw, fh = first.size
+    tw = a.width
+    th = int(round(fh * tw / fw))
+    label_h = max(16, tw // 12)
+    font = _font(int(label_h * 0.7))
+    cols = a.cols or min(len(picks), 6)
+    rows = (len(picks) + cols - 1) // cols
+    gap = 4
+    sheet = Image.new("RGB", (cols * tw + (cols + 1) * gap,
+                              rows * (th + label_h) + (rows + 1) * gap), (40, 40, 40))
+    draw = ImageDraw.Draw(sheet)
+    for k, (t, i, f) in enumerate(picks):
+        r, c = divmod(k, cols)
+        x = gap + c * (tw + gap)
+        y = gap + r * (th + label_h + gap)
+        with Image.open(f) as src:
+            im = src.convert("RGB").resize((tw, th), Image.LANCZOS)
+        sheet.paste(im, (x, y + label_h))
+        draw.text((x + 4, y + 2), f"t={t:.2f}s  {f.name}", fill=(235, 235, 235), font=font)
+        print(f"  t={t:>7.2f}s  frame {i:>5}  {f.name}")
+    out = Path(a.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(out)
+    print(f"\n  wrote {out} ({sheet.width}x{sheet.height}, {len(picks)} tiles, {cols} per row)")
+    print("  Frame index = round(t * fps) into the sorted PNG list; a sequence that")
+    print("  does not start at t=0 needs its times shifted accordingly.")
+    return 0
 
 
 # ------------------------------------------------------------------ plan ----
@@ -233,7 +341,19 @@ def main():
     f.add_argument("--seam", action="store_true",
                    help="split-screen frame: check the midline for a seam")
     f.add_argument("--seam-tol", type=float, default=6.0)
+    f.add_argument("--ignore-region", type=_region, action="append", metavar="x0,y0,x1,y1",
+                   help="pixel box excluded from the row/column step check "
+                        "(repeatable); use for a straight bright element in the design")
     f.set_defaults(func=cmd_frames)
+
+    c = sub.add_parser("sheet", help="labelled contact sheet at given timestamps")
+    c.add_argument("directory")
+    c.add_argument("--times", required=True, help="comma-separated seconds, e.g. 0.5,2,4")
+    c.add_argument("--fps", type=float, required=True)
+    c.add_argument("--out", required=True, help="output PNG path")
+    c.add_argument("--cols", type=int, help="tiles per row (default: up to 6)")
+    c.add_argument("--width", type=int, default=270, help="tile width px (default 270)")
+    c.set_defaults(func=cmd_sheet)
 
     p = sub.add_parser("plan", help="angular-size / framing feasibility table")
     p.add_argument("--angular-size", type=float, required=True, help="subject size in degrees")

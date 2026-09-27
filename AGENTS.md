@@ -9,7 +9,7 @@ Repository `opus-video-audio-skill`, designed for and validated with Claude Opus
 ```bash
 # setup
 python3 -m venv .venv && source .venv/bin/activate
-pip install mido numpy
+pip install mido numpy pillow
 brew install fluid-synth ffmpeg
 
 # the full loop
@@ -20,14 +20,30 @@ python scripts/score_cue.py fingerprint out/*.wav
 
 # smoke test against the checked-in example (must exit 0)
 python scripts/score_cue.py render examples/cue_reveal.json --outdir /tmp/score_cue_smoke
+
+# video helpers
+python scripts/check_frames.py frames frames/ --expect 240 [--ignore-region x0,y0,x1,y1]
+python scripts/check_frames.py sheet frames/ --fps 24 --times 0.5,2,4,9.5 --out sheet.png
+python scripts/serve_video.py out.mp4 --port 8765     # LAN preview; stop it after review
+
+# tests for check_frames.py sheet/--ignore-region and serve_video.py (must pass)
+python -m unittest discover -s tests -v
 ```
 
 ## Structure
 
 - `skills/video-scoring-audio/SKILL.md` — the audio skill
-- `skills/procedural-video-frames/SKILL.md` — the video skill
+- `skills/procedural-video-frames/SKILL.md` — the video skill's entry: core rules for every render, a routing table, the checklist
+  - `lookdev.md` — concept, references and rubric, look-dev stills, the independent critic loop, composing symbols, density at on-screen size
+  - `critic_prompt.md` — prompt template for the independent art-director critic
+  - `detail.md` — SDF per-pixel detail across a large zoom, level of detail, anti-aliasing, motif layout, growth and cross-fades
+  - `reflections.md` — water/glitter reflections and mapping extents through the right Jacobian
+  - `sprites_text.md` — glows and sprites, highlights that read as the wrong object, seams, on-screen text
+  - `blender_handoff.md` — handing a material layer to Blender through a coding agent, the contract, elements riding a shared moving surface
 - `scripts/score_cue.py` — compose → render → normalize → verify CLI
-- `scripts/check_frames.py` — plan / frames / stream verification CLI
+- `scripts/check_frames.py` — plan / frames / sheet / stream verification CLI
+- `scripts/serve_video.py` — serve only the listed video files on the LAN, with HTTP Range, for phone preview
+- `tests/test_scripts.py` — unittest coverage for `check_frames.py sheet`, `--ignore-region`, and `serve_video.py`
 - `examples/cue_reveal.json` — annotated 10s cue spec with a reveal beat at 6.0s
 - `docs/working.md` — changelog and lessons learned
 
@@ -37,8 +53,10 @@ python scripts/score_cue.py render examples/cue_reveal.json --outdir /tmp/score_
 - **Every claim in the skill is measured or cited.** No assertion about audio quality, no remembered gain or loudness numbers. If a figure changes, re-measure and update it with the new measurement.
 - **`score_cue.py` must exit non-zero on clipping, a duration mismatch, or a missed storyboard beat.** The script's value is that it fails loudly; silent success on broken output defeats the purpose.
 - Never claim a cue sounds good. The script's report ends by saying so explicitly — keep that line.
-- Standard-library plus `mido` and `numpy` only. `fluidsynth` and `ffmpeg` are external binaries invoked as subprocesses.
-- Run the smoke test above after touching `score_cue.py`.
+- Standard-library plus `mido` and `numpy` only (the video helpers also use Pillow; `serve_video.py` is standard-library only). `fluidsynth` and `ffmpeg` are external binaries invoked as subprocesses.
+- Run the smoke test above after touching `score_cue.py`, and the unit tests after touching `check_frames.py` or `serve_video.py`.
+- Skill text states reusable rules, not a diary of the films they came from: a general rule, a real-world sanity check where possible, and at most a half-sentence of example. Anything not exercised on a real job is marked **untested**.
+- Keep `procedural-video-frames/SKILL.md` short enough to read in one pass: core rules plus routing. New topic-specific material goes into the matching sub-document, and the routing table is updated when a sub-document's scope changes.
 - This repository's default branch is `master`.
 
 ## Public-repo hygiene
@@ -54,5 +72,5 @@ python scripts/score_cue.py render examples/cue_reveal.json --outdir /tmp/score_
   The only expected hit is the placeholder `op://vault/item/FIELD` in the skill's
   secrets section. Anything else is a finding.
 
-- Do not commit rendered audio, soundfonts, or `out/` directories. They are large and are reproducible from the specs.
+- Do not commit rendered audio or video, frames, contact sheets, soundfonts, or `out/` directories. They are large and are reproducible from the specs.
 - Version control: only commit when explicitly asked; small, independently reviewable commits.
