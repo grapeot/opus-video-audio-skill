@@ -52,6 +52,18 @@ covers what the shot needs: a cache built for one framing can silently return
 an empty or clipped result for a different one, which reads as a rendering bug
 and is not.
 
+## Reusable code
+
+The plumbing every film rewrites is in the repository's `lib/opusvid/` (put
+`lib/` on `sys.path`; numpy, scipy, Pillow): `runner` (the CLI and worker pool
+around one `render_frame(i)`, fresh output directory per run, run start for
+`--since`), `timeline` (easing, named `Events`, a PCHIP camera path with
+log-space width, `solve_time`, a per-frame camera JSON for Blender) and
+`typeset` (glyph masks blended by hand, letter-spaced lines, vertical columns,
+timed reveals). `check_frames.py assemble` muxes and verifies. Start from
+`examples/minimal_film/`, which runs the whole loop in three seconds. Keep the
+film's subject, shading and layout in the film's own script.
+
 ## Where to read next
 
 This file holds the rules that apply to every render. Read a sub-document when
@@ -244,7 +256,8 @@ ffmpeg -v error -i out.mp4 -f null -          # zero output = clean decode
 that **HEVC (libx265) does not decode in some Chrome builds** -- Safari and most
 players are fine, but if the audience is unknown, ship H.264 or offer it
 alongside. A clean decode proves data integrity, not that the shot is any good.
-`check_frames.py stream` runs both checks.
+`check_frames.py stream` runs both checks; `check_frames.py assemble` does
+the H.264 mux (refusing a sequence with missing frames) and then runs them.
 
 ## Checklist before declaring a render done
 
