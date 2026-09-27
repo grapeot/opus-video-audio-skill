@@ -56,12 +56,16 @@ actions that carried the film, all in `lib/opusvid/motion.py` or `typeset`:
   index makes the pen lurch.
 - **A plate inks in** instead of fading: pixels arrive where a smooth radial-plus-noise
   field falls below the progress (`PrintIn`), so an engraving appears as if printed.
+  This is for an *arrival*. For an object *changing* state (a colour, a form) use a
+  cross-fade (`InkBlend`); a mask sweeping from one state to another reads as
+  mechanical (`detail.md`).
 - **It pops** with a small overshoot on scale (`back_out`), for chips and labels, each on
   its own word, never a whole list at once.
 - **It types on**, one character at a time settling from a few pixels below, for titles
   and key sentences.
 - **A number rolls** to its value on fixed-advance digits and lands exactly on it
-  (`roll`); bars grow; a ring timer sweeps.
+  (`roll`); bars grow; a ring timer sweeps. A rolling counter is a hard cut every
+  frame; never cross-fade digits (`sprites_text.md`).
 - **Particles live on their own clocks** (`motes`): each has its own birth, heading and
   curl, so aroma or steam never moves as one sprite.
 - **State drives colour**: an object's appearance follows the quantity being explained
@@ -92,6 +96,10 @@ other way:
   of each object do not match each other.
 - **Materials over symbols**: a brass tag with engraved hatching for "locked" instead of a
   UI padlock glyph; tiny cropped bean sprites tumbling in the drum instead of ellipses.
+
+One register is not one level of richness. Keeping everything in the same
+*publication* is compatible with holding a richer passage back as an event
+(`music_video.md`); what reads as cheap is an unrelated style, not an escalation.
 
 ## Traps that cost a pass
 

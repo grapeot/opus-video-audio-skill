@@ -2,6 +2,26 @@
 
 ## Changelog
 
+### 2026-09-27 — consistency pass over both skills
+
+A read-through for contradictions, stale statements and ambiguity; no new guidance.
+
+- **Contradictions resolved:**
+  - The hand-typed mux example used HEVC while the text recommends H.264 for unknown audiences; it now uses H.264, points to `assemble`, and warns against `-shortest` with a soft subtitle track.
+  - `motion.md` "one register" versus `music_video.md` "hold the rich register back" are reconciled: one publication, with escalation allowed.
+  - "Plates ink in" versus "masks read as mechanical" (`detail.md`) is split into arrivals versus changes of state.
+  - Rolling counters versus hard-cutting labels are reconciled: a roll is a hard cut per frame.
+  - `detail.md`'s representation cross-fade now names the multiply-darkening trap.
+  - Single-pass `loudnorm` (fine for a standalone cue) versus two-pass linear (for any mix) is stated explicitly, including for the sound-design layer.
+- **Ambiguity:**
+  - "The human chooses the concept" now says what to do when the human delegated the choice: pick, and state the pick and its risk.
+  - The prose-linter note had landed inside the "facts" step of the rewrite checks; it is now a separate note.
+- **Stale:**
+  - The frontmatter description and README scope lacked the explainer and "not a slideshow" material.
+  - Validation notes cited only the two-minute explainer.
+  - The threshold section did not mention that a paper-coloured page always fails the corner check.
+  - `serve_video.py`'s default port can be taken.
+
 ### 2026-09-27 — explainers that do not read as slides (`motion.md`, `lib/opusvid/motion.py`)
 
 From a five-minute horizontal narrated explainer (1080p30, 23 lines, 13 scenes in 6 sets, ~110 subtitle cues) whose owner's brief was, above all, "not a slideshow; many drawn visuals with fine element-by-element motion". New sub-document `motion.md`, routed from `SKILL.md` with a checklist line: scenes grouped into sets on one long sheet with a sliding camera and pan blur instead of cuts; elements that outlive their line and change in place (one logged curve drawn, phased, squeezed for its derivative, annotated; a variable tree grown, then locked two sets later); a push-in during long holds (the critic called a 25 s static hold "a slide with a pointer"); the vocabulary of word-keyed arrivals; state-driven colour; drawing diagrams in the plates' register (the critic's top finding on round one was "two visual languages": flat vector diagrams and UI icons next to engraved plates; fixed with hatched walls and columns, sprites cropped from one generated progression plate and a bowl cropped from a scene plate, brass tags for locks); traps (multiply cross-fade darkening mid-fade, colour progressions that contradict the message, dead zones, 10% ghosts, recovering a curve from a matplotlib SVG when the source API returned 401 — start/minimum/end matched the original analysis's numbers); an element-wise title card. `lookdev.md` points to it; `narration.md` gained the long-clause split, the subtitle-mux truncation, and linting a grouped view of a voice script.
