@@ -10,7 +10,7 @@ These skills were written by, and validated with, Claude Opus. They lean on capa
 
 ## Scope, honestly stated
 
-**Validated and covered:** music cue composition, local synthesis, loudness normalization, tail trimming, objective audio verification, the generative-music API route with its failure modes — and on the video side, camera/framing geometry, linear compositing and tone mapping, field-dependent exposure, halo and seam artifacts, frame-sequence verification, and ffmpeg assembly.
+**Validated and covered:** music cue composition, local synthesis, loudness normalization, tail trimming, objective audio verification, the generative-music API route with its failure modes — and on the video side, camera/framing geometry, linear compositing and tone mapping, field-dependent exposure, halo and seam artifacts, look development with an independent critic, per-pixel detail across a large zoom, reflections, a Blender material layer driven through a coding agent, frame-sequence verification, and ffmpeg assembly. Individual suggestions that were not exercised are marked **untested** in the skill text.
 
 **Not covered:** text-to-video generation models, non-linear editors, and colour-managed delivery pipelines. Nothing here was tested against those, so this repository says nothing about them. That gap is deliberate — untested pipeline advice presented as tested is worse than no advice.
 
@@ -34,18 +34,26 @@ On the video side the analogous trap is subtler: the numbers can all be right wh
 - `examples/cue_reveal.json` — an annotated 10-second cue spec with a reveal beat at 6.0s.
 
 **Video**
-- `skills/procedural-video-frames/SKILL.md` — framing math (angular size → focal length, and the shots that are geometrically impossible), linear compositing with a single tone map, the inverted exposure law for a changing field of view, halo-box and seam artifacts, settling the concept before rendering, look development with references and an independent critic, glow and sprite artifacts, reflections on water, exquisite detail across a large continuous zoom, handing material-heavy layers to Blender through a coding agent, on-screen text, one shared timeline for picture and music, frame-sequence verification, and ffmpeg assembly with stream checks.
-- `scripts/check_frames.py` — three checks: `plan` (is the subject the size you think, and does the shot fit?), `frames` (freshness, exposure, halo boxes; `--seam` adds a midline seam check for split-screen frames), `stream` (ffprobe geometry + full decode). Exits non-zero on failure.
+- `skills/procedural-video-frames/SKILL.md` — the entry file: the rules for every render (framing math in angles and the shots that are geometrically impossible, linear compositing with a single tone map, the inverted exposure law for a changing field of view, verification discipline, ffmpeg assembly), a routing table, and the checklist. It routes to:
+  - `lookdev.md` — settling the concept, references and a rubric, look-dev stills, an independent critic on every revision round, composing symbols rather than displaying them, judging detail density at on-screen size.
+  - `critic_prompt.md` — a reusable prompt for the independent art-director critic.
+  - `detail.md` — crafted detail across a large continuous zoom: SDF per-pixel rendering, level of detail, anti-aliasing a height field, motif layout, growth, and cross-fading between representations.
+  - `reflections.md` — reflections on water and mapping extents through the right Jacobian.
+  - `sprites_text.md` — glow and sprite artifacts, highlights that read as a different object, seams, on-screen text.
+  - `blender_handoff.md` — handing a material-heavy layer to Blender through a coding agent: the contract, elements riding a shared moving surface (and making its height visible to an orthographic camera), and operating the agent.
+- `scripts/check_frames.py` — four checks: `plan` (is the subject the size you think, and does the shot fit?), `frames` (freshness, exposure, halo boxes; `--seam` adds a midline seam check for split-screen frames, `--ignore-region` excludes a deliberate straight bright element from the step check), `sheet` (a contact sheet of frames at given timestamps, each labelled with its time), `stream` (ffprobe geometry + full decode). Exits non-zero on failure.
+- `scripts/serve_video.py` — serves only the listed video files over the local network with HTTP Range support, so a film meant for phones can be watched on one. It binds to all interfaces, which exposes the files to everyone on the network while it runs; stop it after the review.
 
 **Shared**
 - `docs/working.md` — changelog and the failures these skills were distilled from.
+- `tests/test_scripts.py` — `python -m unittest discover -s tests` covers the contact sheet, `--ignore-region`, and the preview server.
 
 ## Requirements
 
 ```bash
 brew install fluid-synth        # verified with 2.6.1
 brew install ffmpeg
-pip install mido numpy
+pip install mido numpy pillow
 ```
 
 A soundfont is also needed. macOS ships a General MIDI bank at `/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls` that fluidsynth can read with no download, though it is small and renders quiet. For anything delivered, the MIT-licensed [MuseScore_General.sf2](https://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/MuseScore_General.sf2) (206MB) is substantially better. Gain settings differ between banks and do not transfer — re-measure the peak after switching.
@@ -80,7 +88,7 @@ This exists because of a real near-miss: four "different instrument" variants ge
 
 ## Installing the skill
 
-Hand this repository's URL to your coding agent (Claude Code, Codex, Cursor, OpenCode, or similar) and ask it to install the skill. The installing agent should start from the target workspace's `AGENTS.md` or `CLAUDE.md`, follow any routing file it references, and link `skills/video-scoring-audio` into the workspace's skill discovery chain — an index file, or a global skills directory such as `~/.claude/skills/` or `~/.config/opencode/skills/`.
+Hand this repository's URL to your coding agent (Claude Code, Codex, Cursor, OpenCode, or similar) and ask it to install the skill. The installing agent should start from the target workspace's `AGENTS.md` or `CLAUDE.md`, follow any routing file it references, and link `skills/video-scoring-audio` and `skills/procedural-video-frames` into the workspace's skill discovery chain — an index file, or a global skills directory such as `~/.claude/skills/` or `~/.config/opencode/skills/`. Link the directories, not only the `SKILL.md` files: the video skill's sub-documents live next to its entry file.
 
 ## License
 
