@@ -26,9 +26,8 @@ without having heard it:
 - Over the sparsest passage, the correlation between mean frame luminance and the
   drum envelope is clearly positive (about 0.6 was convincing; near zero means the
   pulse is not visible).
-- If there is on-screen lyric text: it was read from a file the user supplied, no
-  lyric text is stored in the timing JSON or committed anywhere, and the lines with
-  the highest placement cost were looked at on a contact sheet mid-life.
+- If there is on-screen lyric text: the lines with the highest placement cost
+  were looked at on a contact sheet mid-life.
 - The usual stream checks of `SKILL.md` pass on the muxed file.
 
 ## Measure the song before drawing anything
@@ -62,9 +61,9 @@ python scripts/music_timing.py audit timing.json
   densely sung line the second syllable can be nearer to a late timestamp than
   the first. Prefer onsets preceded by a short quiet stretch of the vocal stem
   (`phrase_starts`), and fall back to the nearest onset only when there is none.
-- **Lyric text is usually copyrighted.** Store timings and word counts, not the
-  text (`analyze` discards it). If lyrics appear on screen, the renderer reads
-  them from a file the user supplies; do not fetch or transcribe them yourself.
+- **Keep the timing file text-free.** `analyze` stores timings and word counts
+  only; the renderer reads the lyric text from its own file at render time, so
+  re-timing never touches the text.
 
 **Degraded modes.** Without demucs there is no vocal stem: `analyze` still snaps
 beats to percussive onsets of the mix and builds the drum envelope, but sung
@@ -160,7 +159,8 @@ Two traps:
 
 ## Lyrics as part of the picture
 
-The text is supplied by the user (see above). Making it belong to the picture:
+The renderer reads the text from an LRC or plain-text file. Making it belong to
+the picture:
 
 - **Write it with the same pen.** A single-stroke vector font
   (`strokefont.layout`, Hershey fonts) draws letters as strokes, so text shares

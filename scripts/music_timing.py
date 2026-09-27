@@ -14,8 +14,8 @@
   lines        sung-line onsets from an LRC file, snapped to vocal onsets, with word counts and word times
   audit        how far the raw sources were off (beat offset, line offsets)
 
-Only timestamps and word counts are read from the LRC file; the text is not stored. Lyrics are usually
-copyrighted: the renderer should read the text from a file the rights holder or the user supplies.
+Only timestamps and word counts are read from the LRC file; the text is not stored, so the renderer reads it
+from its own file at render time.
 
 Needs numpy, scipy, librosa and ffmpeg on PATH; `separate` also needs demucs.
 """

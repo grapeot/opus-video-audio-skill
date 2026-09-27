@@ -212,7 +212,7 @@ feedback, a rewind, a per-stroke scramble and reassembly, and a CRT-off ending. 
   argued as the song's own and 3D as a reserved event.
 - **Persistence trails first ghosted the whole frame** during camera moves because each past sub-frame used its
   own camera; drawing the past with the current camera left only moving ink trailing.
-- **Lyrics.** The text came from a file the user supplied. The first placement rule (upper or lower third,
+- **Lyrics.** The first placement rule (upper or lower third,
   alternating) put words over heavy elements repeatedly; stacked lines 30-40 px apart read as overlap; faint
   remnants carried by the camera landed on later scenes. Measured placement (five samples per line, 40 positions,
   three sizes), screen anchoring above a 2.5x zoom ratio, a clearing band, box-overlap wiping and no remnants
