@@ -355,6 +355,15 @@ work:
     linearisation step (inverse sRGB) before compositing in linear light;
   - test frames first, which the agent must open and iterate on, then the full
     sequence, with per-frame timing reported.
+- **If procedural elements must ride a moving plate surface, share the motion
+  as code.** Put the surface's motion (height and any in-plane sway) in one
+  small module that both the Blender script and the procedural renderer import,
+  and invert the sway per pixel (a few fixed-point iterations) to find which
+  material point each pixel shows. Elements laid on top of a separately
+  rendered, moving cloth otherwise look pasted on. The strongest "it is on the
+  cloth" cue was lighting, not motion: tilt the elements' normals by the
+  surface's slope and dim them in the surface's valleys. A coupling factor that
+  ramps from 0 to 1 lets an element start rigid and settle onto the surface.
 - **Composite in your pipeline, not theirs.** Load the plate, linearise, apply
   the procedural layer's contact shadows to it, put the procedural elements on
   top, then tone map once.
