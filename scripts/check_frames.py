@@ -13,6 +13,7 @@ Subcommands
   sheet    contact sheet of the frames at given timestamps, each labelled
   plan     angular-size table: is the subject the size you think, and on-frame?
   stream   ffprobe geometry + full decode of a finished mp4
+  assemble frames (+ optional audio) -> H.264 mp4, then the stream check
 
 Examples
 --------
@@ -21,10 +22,13 @@ Examples
   python check_frames.py sheet frames_v4 --fps 24 --times 0.5,2,4,6,9.5 --out sheet.png
   python check_frames.py plan --angular-size 0.52 --height 1920 --fov 100,20,3.1
   python check_frames.py stream out.mp4 --expect-duration 10 --expect-fps 24
+  python check_frames.py assemble frames_v4 --fps 24 --audio cue.wav --out out.mp4
+  python check_frames.py assemble frames_v4 --fps 24 --scale 360x640 --out small.mp4
 """
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -294,6 +298,9 @@ def cmd_stream(a):
             n, d = (fps.split("/") + ["1"])[:2]
             fps_v = float(n) / float(d or 1)
             print(f"  video    {s.get('codec_name')} {s.get('width')}x{s.get('height')} @ {fps_v:g}fps")
+            if a.expect_size and (s.get("width"), s.get("height")) != a.expect_size:
+                problems.append(f"size {s.get('width')}x{s.get('height')} != expected "
+                                f"{a.expect_size[0]}x{a.expect_size[1]}")
             if a.expect_fps and abs(fps_v - a.expect_fps) > 0.01:
                 problems.append(f"fps {fps_v:g} != expected {a.expect_fps}")
             if s.get("codec_name") == "hevc":
@@ -321,6 +328,97 @@ def cmd_stream(a):
     if not problems:
         print("  ok    stream is intact -- which proves data integrity, not that the shot works")
     return 1 if problems else 0
+
+
+# -------------------------------------------------------------- assemble ----
+
+_SEQ = re.compile(r"^(.*?)(\d+)\.png$")
+
+
+def _size(text):
+    try:
+        w, h = (int(v) for v in text.lower().split("x"))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"expected WxH, got {text!r}")
+    if w <= 0 or h <= 0:
+        raise argparse.ArgumentTypeError(f"expected a positive WxH, got {text!r}")
+    return w, h
+
+
+def frame_sequence(d):
+    """Describe a numbered PNG sequence: (ffmpeg pattern, first index, count).
+
+    Fails loudly on anything ffmpeg would silently get wrong: mixed prefixes or
+    digit widths, and gaps in the numbering (a preview subset, a crashed
+    worker) -- ffmpeg's image2 demuxer stops at the first gap, which would cut
+    the film short and shift every later beat.
+    """
+    files = sorted(Path(d).glob("*.png"))
+    if not files:
+        raise ValueError(f"no PNG frames in {d}")
+    parsed = []
+    for f in files:
+        m = _SEQ.match(f.name)
+        if not m:
+            raise ValueError(f"{f.name} is not a numbered frame (expected e.g. f0000.png)")
+        parsed.append((m.group(1), len(m.group(2)), int(m.group(2))))
+    kinds = {(p, w) for p, w, _ in parsed}
+    if len(kinds) != 1:
+        raise ValueError(f"mixed frame names in {d}: {sorted(kinds)[:4]}")
+    prefix, width = kinds.pop()
+    nums = sorted(n for _, _, n in parsed)
+    missing = sorted(set(range(nums[0], nums[-1] + 1)) - set(nums))
+    if missing:
+        shown = ", ".join(map(str, missing[:8])) + (" ..." if len(missing) > 8 else "")
+        raise ValueError(f"{len(missing)} frame(s) missing from the sequence "
+                         f"{nums[0]}..{nums[-1]}: {shown}")
+    return str(Path(d) / f"{prefix}%0{width}d.png"), nums[0], len(nums)
+
+
+def cmd_assemble(a):
+    try:
+        pattern, first, n = frame_sequence(a.directory)
+    except ValueError as e:
+        print(f"FAIL  {e}")
+        return 1
+    if a.audio and not Path(a.audio).exists():
+        print(f"FAIL  audio file not found: {a.audio}")
+        return 1
+    with Image.open(pattern % first) as im:
+        fw, fh = im.size
+    ow, oh = a.scale or (fw, fh)
+    if ow % 2 or oh % 2:
+        print(f"FAIL  output size {ow}x{oh} is odd; yuv420p needs even dimensions "
+              f"(pass --scale with even numbers)")
+        return 1
+    duration = n / a.fps
+    print(f"{n} frames {fw}x{fh} from {pattern} (first {first}) at {a.fps:g}fps "
+          f"= {duration:.3f}s -> {a.out} ({ow}x{oh})")
+
+    cmd = ["ffmpeg", "-v", "error", "-y",
+           "-framerate", f"{a.fps:g}", "-start_number", str(first), "-i", pattern]
+    if a.audio:
+        cmd += ["-i", a.audio]
+    if a.scale:
+        cmd += ["-vf", f"scale={ow}:{oh}:flags=lanczos"]
+    cmd += ["-c:v", "libx264", "-preset", a.preset, "-crf", str(a.crf),
+            "-pix_fmt", "yuv420p", "-r", f"{a.fps:g}"]
+    if a.audio:
+        # -shortest ends the file with the picture if the cue runs long; a cue that
+        # is too SHORT then shows up as a duration mismatch in the stream check
+        cmd += ["-c:a", "aac", "-b:a", a.audio_bitrate, "-shortest"]
+    cmd += ["-movflags", "+faststart", a.out]
+    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    enc = subprocess.run(cmd, capture_output=True, text=True)
+    if enc.returncode != 0:
+        print("FAIL  ffmpeg:", enc.stderr.strip()[-600:])
+        return 1
+
+    print()
+    check = argparse.Namespace(path=a.out, expect_duration=duration,
+                               duration_tol=a.duration_tol, expect_fps=a.fps,
+                               require_audio=bool(a.audio), expect_size=(ow, oh))
+    return cmd_stream(check)
 
 
 def main():
@@ -370,7 +468,21 @@ def main():
     s.add_argument("--duration-tol", type=float, default=0.1)
     s.add_argument("--expect-fps", type=float)
     s.add_argument("--require-audio", action="store_true")
+    s.add_argument("--expect-size", type=_size, metavar="WxH")
     s.set_defaults(func=cmd_stream)
+
+    m = sub.add_parser("assemble", help="frames (+ audio) -> H.264 mp4, then verify it")
+    m.add_argument("directory", help="directory of numbered PNG frames (f0000.png ...)")
+    m.add_argument("--fps", type=float, required=True, help="frame rate (explicit, always)")
+    m.add_argument("--out", required=True, help="output .mp4 path")
+    m.add_argument("--audio", help="audio file to mux (e.g. the cue .wav)")
+    m.add_argument("--crf", type=int, default=18, help="x264 quality (default 18)")
+    m.add_argument("--preset", default="medium", help="x264 preset (default medium)")
+    m.add_argument("--scale", type=_size, metavar="WxH",
+                   help="resize on encode, e.g. 360x640 for a small preview")
+    m.add_argument("--audio-bitrate", default="192k")
+    m.add_argument("--duration-tol", type=float, default=0.1)
+    m.set_defaults(func=cmd_assemble)
 
     a = ap.parse_args()
     sys.exit(a.func(a))

@@ -41,20 +41,26 @@ On the video side the analogous trap is subtler: the numbers can all be right wh
   - `reflections.md` — reflections on water and mapping extents through the right Jacobian.
   - `sprites_text.md` — glow and sprite artifacts, highlights that read as a different object, seams, on-screen text.
   - `blender_handoff.md` — handing a material-heavy layer to Blender through a coding agent: the contract, elements riding a shared moving surface (and making its height visible to an orthographic camera), and operating the agent.
-- `scripts/check_frames.py` — four checks: `plan` (is the subject the size you think, and does the shot fit?), `frames` (freshness, exposure, halo boxes; `--seam` adds a midline seam check for split-screen frames, `--ignore-region` excludes a deliberate straight bright element from the step check), `sheet` (a contact sheet of frames at given timestamps, each labelled with its time), `stream` (ffprobe geometry + full decode). Exits non-zero on failure.
+- `scripts/check_frames.py` — five subcommands: `plan` (is the subject the size you think, and does the shot fit?), `frames` (freshness, exposure, halo boxes; `--seam` adds a midline seam check for split-screen frames, `--ignore-region` excludes a deliberate straight bright element from the step check), `sheet` (a contact sheet of frames at given timestamps, each labelled with its time), `stream` (ffprobe geometry + full decode), and `assemble` (frames + optional audio → H.264/yuv420p/faststart mp4 at an explicit fps, optionally scaled, refusing a sequence with missing frames, then the `stream` check). Exits non-zero on failure.
 - `scripts/serve_video.py` — serves only the listed video files over the local network with HTTP Range support, so a film meant for phones can be watched on one. It binds to all interfaces, which exposes the files to everyone on the network while it runs; stop it after the review.
+
+**Reusable code**
+- `lib/opusvid/` — a thin toolkit for the plumbing every film rewrote, not a framework: `runner.py` (the CLI — `--out`, `--frames 0,45,80:90`, `--jobs`, `--plan`, `--overwrite` — and worker pool around one `render_frame(i)`, a per-worker `init`, refusal to write into a non-empty output directory, the run start recorded for `check_frames.py frames --since`), `timeline.py` (`smooth`, `ease_in_out`, named `Events`, a PCHIP `CameraPath` with width in log space, `solve_time`, `world_to_pixel`, `export_camera_json` for a Blender layer), `typeset.py` (glyph coverage masks, letter-spaced lines, vertical CJK columns, blending into a float image, timed per-character reveals, a soft dark bed). Not installed: add the repository's `lib/` to `sys.path` (or `PYTHONPATH=lib`) and `import opusvid.timeline`.
+- `examples/minimal_film/` — a 3 s, 360x640 film that runs the whole loop (runner, timeline, typeset, a cue generated from the same events, `assemble`); its README lists the commands and the expected results. It is also the smoke test.
 
 **Shared**
 - `docs/working.md` — changelog and the failures these skills were distilled from.
-- `tests/test_scripts.py` — `python -m unittest discover -s tests` covers the contact sheet, `--ignore-region`, and the preview server.
+- `tests/` — `python -m unittest discover -s tests` covers the contact sheet, `--ignore-region`, the preview server, `assemble`, and `lib/opusvid`.
 
 ## Requirements
 
 ```bash
 brew install fluid-synth        # verified with 2.6.1
 brew install ffmpeg
-pip install mido numpy pillow
+pip install mido numpy pillow scipy
 ```
+
+Dependencies are split on purpose: `score_cue.py` needs only the standard library, `mido` and `numpy`; `check_frames.py` adds Pillow; `serve_video.py` is standard-library only; `lib/opusvid` uses numpy, scipy and Pillow. Nothing under `scripts/` imports `lib/`.
 
 A soundfont is also needed. macOS ships a General MIDI bank at `/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls` that fluidsynth can read with no download, though it is small and renders quiet. For anything delivered, the MIT-licensed [MuseScore_General.sf2](https://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/MuseScore_General.sf2) (206MB) is substantially better. Gain settings differ between banks and do not transfer — re-measure the peak after switching.
 
