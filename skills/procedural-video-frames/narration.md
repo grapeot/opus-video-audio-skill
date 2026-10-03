@@ -103,6 +103,10 @@ script (`narration_check.py`). The comparison is a review aid, not a verdict:
 - **Voice two or three takes of a flagged line and keep the one whose transcript
   is cleanest.** Takes of the same text vary; transcripts of the variants were
   enough to choose between them.
+- **The same difference in every take is the recogniser, not the voice.** A line
+  containing 三分之一 transcribed as "1 3分之一" in three separate takes; the TTS
+  varies between takes and the recogniser's number formatting does not, so the
+  identical diff marked recogniser noise and no further retakes were needed.
 - A clean transcript still does not mean the delivery is right. Say so, and have
   a human listen before the voice ships.
 
@@ -120,6 +124,11 @@ be read) and what the subtitle shows (digits, units, proper names as written).
   whole when splitting. A clause with no punctuation can still run past the limit
   (38 characters on one line in practice); `narration.chunk` now splits it at CJK
   boundaries, leaving numbers and Latin phrases whole.
+- **List the short cues after cutting.** A forced split can still separate a
+  date from its unit: a subtitle text without a comma came out as "这是 SDO 卫星在
+  2024" followed by a 0.9 s cue "年 5 月 10 日". Print every cue shorter than about
+  1.3 s and fix the bad ones by adding commas to the subtitle text (`sub`) only;
+  the voice text and its takes stay as they are.
 - **Burn them in on a fixed band, composited after any motion blur,** so they stay
   sharp during camera moves and page turns; give them a soft bed so they read
   over detailed plates.

@@ -205,8 +205,21 @@ work" when it was never tested. Wait for the **process** to exit, or render into
 a fresh per-run directory:
 
 ```bash
-until ! pgrep -f render_film.py >/dev/null; do sleep 15; done
+python render_film.py --out frames_r2 & PID=$!
+while kill -0 "$PID" 2>/dev/null; do sleep 15; done     # wait on the PID you started
 ```
+
+**Do not wait on a name with `pgrep -f`.** It matches every process whose command
+line contains the name, and agent harnesses leave long-lived shells around whose
+command lines mention the script: the shell that launched a render with `&`, and
+other waiters. On macOS `pgrep` excludes its own ancestors, so a waiter does not
+match itself, but two waiters watching each other's script names, or one waiter
+and a lingering launcher shell, never see "no match": two queued Blender passes
+sat idle for about seven hours that way, and a probe confirmed that a waiter loops
+for as long as a sibling shell mentioning the name is alive. To run passes in
+order, put them in one backgrounded command (`a && b && c`) instead of separate
+waiters, and pair any long pass with a heartbeat check about every 30 minutes
+that compares frame counts, so a stalled or never-started pass is caught early.
 
 When a frame contradicts the code, check its modification time before changing
 anything.
@@ -243,8 +256,12 @@ speed are judged at delivery size. For a phone audience, play the actual file on
 a phone: `scripts/serve_video.py out.mp4` serves only the listed files on the
 local network with the HTTP Range support iOS Safari needs, and prints the URL.
 It binds to all interfaces, so anyone on the same network can fetch the file
-while it runs; stop it (Ctrl-C) as soon as the review is done. If the default port
-is taken by something else, pass `--port` with a free one.
+while it runs; stop it (Ctrl-C) as soon as the review is done. If the machine is on
+a private overlay network such as Tailscale, bind to that address instead
+(`--host <tailscale IPv4>`): only the reviewer's own devices can reach it, from
+anywhere. If the default port is taken by something else, pass `--port` with a
+free one (check with `lsof -iTCP:<port> -sTCP:LISTEN`; never stop a server you did
+not start).
 
 **Treat the checker's thresholds as defaults, not verdicts.** Generic checks
 (corner brightness, tonal spread, a midline seam, a sharp row or column step)
