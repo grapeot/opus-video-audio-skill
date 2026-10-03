@@ -267,6 +267,22 @@ one: -16.0 LUFS, -1.3 dBTP after normalisation):
   a gain. Measured before normalisation, the voice stem was -24.5 LUFS and the
   ducked music -40.3 LUFS. Whether that balance is right is a listening
   judgement; hand it over with the numbers.
+- **Measure the bed where it plays, not over the whole cue.** Matching the voice
+  to the music's whole-cue RMS only works when the score has an even level. A
+  score with one big accent breaks it: on a five-minute film, a flare hit about
+  17 dB above the median bed set the whole-cue RMS, the bed under the narration
+  landed nearly 30 dB below the voice, and the human reported hearing no music at
+  all, although every number checked (loudness, peak, the hit's timing) was in
+  spec. Level the score's slow dynamics first (a gain from a ~1.5 s RMS envelope
+  toward its median, exponent ~0.6, capped at ±12 dB, then smoothed), and scale
+  it from the music's median level in voice-active windows. Always report two
+  numbers: music relative to voice while speaking and in the gaps. After the fix
+  they were about -14 dB and -9.5 dB, at -16.0 LUFS integrated.
+- **Check that effects do not mask words.** An effect that is not ducked can sit
+  on top of a line. Compare the mix RMS over the effect's window with an ordinary
+  speech window: a flare boom under a spoken line first measured 1.7 dB above
+  the speech windows; halving its gain and ducking effects about 4 dB while the
+  voice is active brought it level with them.
 - **Normalise the final mix in two passes, linear.** Run `loudnorm` once with
   `print_format=json` to measure, then again with the measured values and
   `linear=true`, which applies one gain instead of dynamically reshaping the mix

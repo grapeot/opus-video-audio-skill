@@ -2,6 +2,13 @@
 
 ## Changelog
 
+### 2026-10-03 — lessons from a 4.5-minute narrated film (real data + Blender plates)
+
+- **Waiting on renders** (`procedural-video-frames/SKILL.md`): the `pgrep -f` wait example is replaced by waiting on a PID. Name-based waiters matched lingering launcher shells and each other (macOS `pgrep` excludes only its own ancestors), and two queued Blender passes sat idle for about seven hours. Passes are now chained in one backgrounded command with a 30-minute heartbeat. A probe confirmed the sibling-shell match.
+- **Music bed level** (`video-scoring-audio/SKILL.md`): measure and scale the bed in voice-active windows after levelling the score. Whole-cue RMS let a single accent bury the bed nearly 30 dB under the voice, and the human heard no music. Also new: check that effects do not mask words.
+- **Narration** (`narration.md`): an identical diff across retakes is recogniser formatting, not TTS. List cues under about 1.3 s and fix bad splits by punctuating the subtitle text only.
+- **Phone preview** (`SKILL.md`): bind `serve_video.py` to a Tailscale address when available; check for port conflicts before starting it.
+
 ### 2026-09-27 — consistency pass over both skills
 
 A read-through for contradictions, stale statements and ambiguity; no new guidance.
